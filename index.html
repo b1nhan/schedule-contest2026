@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lịch thi 2026</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --text:#1d2330; --muted:#6b7280; --line:#e3e6eb; --red:#dc2626; --amber:#d97706; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.5 system-ui,sans-serif; background:var(--bg); color:var(--text); }
+  main { max-width:1100px; margin:0 auto; padding:16px; }
+  h1 { margin:0; font-size:22px; }
+  h2 { font-size:16px; margin:24px 0 8px; }
+  header { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
+  button { font:inherit; padding:6px 12px; border:1px solid var(--line); border-radius:8px; background:var(--card); cursor:pointer; }
+  button.primary { background:var(--text); color:#fff; border-color:var(--text); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
+  .muted { color:var(--muted); font-size:13px; }
+  .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; }
+
+  /* timeline */
+  .tl { overflow-x:auto; }
+  .tl-inner { min-width:760px; position:relative; }
+  .months { display:flex; margin-left:130px; border-bottom:1px solid var(--line); }
+  .months div { font-size:12px; color:var(--muted); border-left:1px solid var(--line); padding-left:4px; }
+  .row { display:flex; border-bottom:1px dashed var(--line); }
+  .row-label { width:130px; flex:none; font-size:13px; font-weight:600; padding:6px 6px 6px 0; }
+  .track { position:relative; flex:1; }
+  .bar { position:absolute; height:24px; border-radius:6px; color:#fff; font-size:12px; padding:2px 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; min-width:10px; }
+  .bar.single { border-radius:50%; width:14px !important; padding:0; transform:translateX(-7px); outline:2px solid #fff; }
+  .bar.tentative { opacity:.55; background-image:repeating-linear-gradient(45deg,transparent 0 6px,rgba(255,255,255,.35) 6px 12px); }
+  .bar.past { filter:grayscale(.8); opacity:.5; }
+  .today { position:absolute; top:0; bottom:0; width:2px; background:var(--red); z-index:2; pointer-events:none; }
+  .today span { position:absolute; top:-18px; left:-22px; white-space:nowrap; font-size:11px; color:var(--red); }
+
+  /* lists */
+  .grid { display:grid; gap:10px; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); }
+  .ev { border-left:5px solid; cursor:pointer; }
+  .ev.past { opacity:.55; }
+  .ev-top { display:flex; justify-content:space-between; gap:8px; }
+  .badge { font-size:12px; padding:1px 8px; border-radius:99px; background:var(--bg); white-space:nowrap; align-self:flex-start; }
+  .badge.soon { background:#fee2e2; color:var(--red); font-weight:600; }
+  .badge.now { background:#dcfce7; color:#15803d; font-weight:600; }
+  .ev ul { list-style:none; padding:0; margin:6px 0 0; font-size:13px; }
+  .ev li label { display:flex; gap:6px; align-items:flex-start; }
+  .ev li.done { color:var(--muted); text-decoration:line-through; }
+  .conflict { border-left:5px solid var(--amber); margin-bottom:8px; }
+  .conflict.hard { border-color:var(--red); }
+  .filters { display:flex; gap:12px; flex-wrap:wrap; font-size:13px; }
+
+  dialog { border:none; border-radius:12px; padding:0; width:min(520px,100% - 32px); }
+  dialog form { padding:16px; display:grid; gap:10px; }
+  dialog label { display:grid; gap:2px; font-size:13px; color:var(--muted); }
+  dialog input, dialog textarea { font:inherit; padding:6px 8px; border:1px solid var(--line); border-radius:6px; color:var(--text); }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .actions { display:flex; justify-content:space-between; gap:8px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div><h1>Lịch thi 2026</h1><div class="muted" id="todayText"></div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="exportBtn">Xuất JSON</button>
+      <button id="importBtn">Nhập JSON</button>
+      <button class="primary" id="addBtn">+ Thêm mốc</button>
+    </div>
+  </header>
+
+  <h2>⚠️ Lịch trùng nhau</h2>
+  <div id="conflicts"></div>
+
+  <h2>Timeline</h2>
+  <div class="card tl"><div class="tl-inner" id="timeline"></div></div>
+
+  <h2>Các mốc</h2>
+  <div class="filters" id="filters"></div>
+  <p class="filters"><label><input type="checkbox" id="showPast"> Hiện mốc đã qua</label></p>
+  <div class="grid" id="list"></div>
+</main>
+
+<dialog id="dlg">
+  <form method="dialog" id="form">
+    <label>Cuộc thi <input name="contest" list="contests" required></label>
+    <datalist id="contests"></datalist>
+    <label>Tên mốc / vòng <input name="title" required></label>
+    <div class="two">
+      <label>Từ ngày <input type="date" name="start" required></label>
+      <label>Đến ngày (bỏ trống nếu 1 ngày) <input type="date" name="end"></label>
+    </div>
+    <div class="two">
+      <label>Giờ <input name="time" placeholder="08:00 - 16:30"></label>
+      <label>Địa điểm <input name="place"></label>
+    </div>
+    <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" name="tentative"> Ngày chưa chính thức</label>
+    <label>Cần chuẩn bị (mỗi dòng 1 việc) <textarea name="checklist" rows="5"></textarea></label>
+    <label>Ghi chú <textarea name="notes" rows="3"></textarea></label>
+    <div class="actions">
+      <button type="button" id="delBtn" style="color:var(--red)">Xoá</button>
+      <span style="display:flex;gap:8px">
+        <button value="cancel" formnovalidate>Huỷ</button>
+        <button class="primary" value="save">Lưu</button>
+      </span>
+    </div>
+  </form>
+</dialog>
+<input type="file" id="fileIn" accept="application/json" hidden>
+
+<script>
+const KEY = 'contest-schedule-2026';
+const COLORS = { 'Big Idea (UEH)':'#e11d48', 'ISB (UEH)':'#2563eb', 'DBC':'#059669', 'AISC (UIT)':'#7c3aed' };
+const FALLBACK = ['#ea580c','#0891b2','#ca8a04','#db2777','#4f46e5'];
+
+const e = (contest, title, start, end, extra = {}) => ({ id: crypto.randomUUID(), contest, title, start, end: end || start, time:'', place:'', notes:'', tentative:false, checklist:[], ...extra });
+const cl = (...items) => items.map(t => ({ t, done:false }));
+const SEED = [
+  e('Big Idea (UEH)', 'Chung kết (Final day)', '2026-10-01', null, { place:'UEH' }),
+
+  e('AISC (UIT)', 'Vòng 1 · Khởi động – nộp hồ sơ', '2026-08-01', '2026-09-15', { checklist: cl('Đăng ký trực tuyến','Chọn chủ đề dự thi','Hoàn thiện hồ sơ','Nộp thuyết minh đề tài') }),
+  e('AISC (UIT)', 'Vòng 2 · Trình bày', '2026-10-15', null, { time:'08:00 - 16:30 (có mặt 07:30 nếu cần test thiết bị)', place:'UIT',
+    notes:'02 phút chuẩn bị + 15 phút trình bày & hỏi đáp. BTC công bố hướng dẫn poster trước 30/09. Không làm poster = không được vào Vòng 3 & Chung kết.',
+    checklist: cl('Mang & đeo thẻ sinh viên','Slide thuyết trình','Thiết kế poster','Mockup giao diện sản phẩm demo') }),
+  e('AISC (UIT)', 'Vòng 3 · Bình chọn & mentor (20% điểm)', '2026-10-20', '2026-10-31', {
+    notes:'Điểm bình chọn chỉ áp dụng cho Bảng 2.',
+    checklist: cl('Truyền thông, kêu gọi bình chọn poster','Làm việc với Mentor','Hoàn thiện sản phẩm') }),
+  e('AISC (UIT)', 'Vòng 4 · Chung kết (80% điểm)', '2026-11-26', null, { place:'UIT',
+    notes:'Bắt buộc có demo kết nối cơ sở dữ liệu.',
+    checklist: cl('Demo sản phẩm kết nối CSDL','Pitch Deck','Trưng bày poster','Chuẩn bị trả lời phản biện') }),
+
+  e('DBC', 'Đăng ký', '2026-09-10', '2026-09-28'),
+  e('DBC', 'Vòng Sơ loại', '2026-10-01', '2026-11-10'),
+  e('DBC', 'Vòng Loại', '2026-11-15', '2026-11-25'),
+  e('DBC', 'Vòng Bán kết', '2026-11-28', '2026-12-05'),
+  e('DBC', 'Chung kết & Gala', '2026-12-01', '2026-12-31', { tentative:true, notes:'BTC mới công bố "tháng 12/2026" – cập nhật khi có ngày chính xác.' }),
+
+  e('ISB (UEH)', 'Qualifying · Trắc nghiệm online', '2026-09-21', '2026-09-27', { notes:'Mỗi SV 1 lượt, 30 phút: kinh tế, kinh doanh, công nghệ.' }),
+  e('ISB (UEH)', 'Ideation · Infographic', '2026-09-29', '2026-10-04', {
+    notes:'Top 120. 3 track: AI in Retail / E-Commerce / Finance & Banking.',
+    checklist: cl('Xác định vấn đề của doanh nghiệp','Đề xuất giải pháp','Làm infographic') }),
+  e('ISB (UEH)', 'Strategy Round', '2026-10-12', '2026-10-17', { notes:'Top 12.', checklist: cl('Kế hoạch triển khai chi tiết','Prototype giải pháp') }),
+  e('ISB (UEH)', 'Grand Finale & Awards Gala', '2026-11-15', null, { place:'UEH',
+    notes:'Top 6. Pitching tối đa 10 phút + 5 phút Q&A + 5 phút nhận xét.',
+    checklist: cl('Pitch deck từ Strategy Round','Tập pitch ≤ 10 phút','Chuẩn bị Q&A') }),
+];
+
+let events;
+try { events = JSON.parse(localStorage.getItem(KEY)) || SEED; } catch { events = SEED; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(events)); } catch {} };
+
+// dates: 'YYYY-MM-DD' → day number (UTC, so no DST/timezone drift)
+const day = s => Date.UTC(+s.slice(0,4), +s.slice(5,7) - 1, +s.slice(8,10)) / 864e5;
+const now = new Date();
+const TODAY = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 864e5;
+const fmt = s => s.slice(8,10) + '/' + s.slice(5,7);
+const range = ev => ev.start === ev.end ? fmt(ev.start) : fmt(ev.start) + ' → ' + fmt(ev.end);
+const esc = s => String(s).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+const contests = () => [...new Set(events.map(x => x.contest))];
+const color = c => COLORS[c] || FALLBACK[contests().indexOf(c) % FALLBACK.length];
+
+// overlapping pairs across different contests.
+// level 2 = two exam days on the same day, 1 = exam day inside another round, 0 = two rounds running in parallel
+function findConflicts(list) {
+  const out = [];
+  for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
+    const a = list[i], b = list[j];
+    if (a.contest === b.contest) continue;
+    const from = Math.max(day(a.start), day(b.start)), to = Math.min(day(a.end), day(b.end));
+    if (from > to || to < TODAY) continue;
+    out.push({ a, b, from, to, level: (a.start === a.end) + (b.start === b.end) });
+  }
+  return out.sort((x, y) => y.level - x.level || x.from - y.from);
+}
+
+function countdown(ev) {
+  const s = day(ev.start) - TODAY, en = day(ev.end) - TODAY;
+  if (en < 0) return ['Đã qua', ''];
+  if (s <= 0) return [ev.start === ev.end ? 'HÔM NAY' : en ? `Đang diễn ra · còn ${en} ngày` : 'Hôm nay là ngày cuối', 'now'];
+  return [s === 1 ? 'Ngày mai' : `còn ${s} ngày`, s <= 7 ? 'soon' : ''];
+}
+
+const hidden = new Set();
+
+function render() {
+  document.getElementById('todayText').textContent = 'Hôm nay: ' + now.toLocaleDateString('vi-VN', { weekday:'long', day:'2-digit', month:'2-digit', year:'numeric' });
+  document.getElementById('contests').innerHTML = contests().map(c => `<option value="${esc(c)}">`).join('');
+
+  // conflicts
+  const cf = findConflicts(events.filter(x => !hidden.has(x.contest)));
+  const dstr = d => new Date(d * 864e5).toISOString().slice(0,10);
+  const cfCard = c => `
+    <div class="card conflict ${c.level === 2 ? 'hard' : ''}">
+      <b>${['Chạy song song', 'Ngày thi trong lúc vòng khác đang chạy', 'Trùng ngày thi'][c.level]} · ${c.from === c.to ? fmt(dstr(c.from)) : fmt(dstr(c.from)) + ' → ' + fmt(dstr(c.to))}</b>
+      <div><span class="dot" style="background:${color(c.a.contest)}"></span>${esc(c.a.contest)} – ${esc(c.a.title)} <span class="muted">(${range(c.a)})</span></div>
+      <div><span class="dot" style="background:${color(c.b.contest)}"></span>${esc(c.b.contest)} – ${esc(c.b.title)} <span class="muted">(${range(c.b)})</span></div>
+    </div>`;
+  const main = cf.filter(c => c.level), parallel = cf.filter(c => !c.level);
+  document.getElementById('conflicts').innerHTML = (main.length ? main.map(cfCard).join('') : '<p class="muted">Không có ngày thi nào bị trùng sắp tới 🎉</p>')
+    + (parallel.length ? `<details><summary class="muted">${parallel.length} cặp vòng thi chạy song song (ít nghiêm trọng hơn)</summary>${parallel.map(cfCard).join('')}</details>` : '');
+
+  // timeline: whole months spanning all events
+  const all = events.filter(x => !hidden.has(x.contest));
+  const tl = document.getElementById('timeline');
+  if (!all.length) { tl.innerHTML = '<p class="muted">Chưa có mốc nào.</p>'; }
+  else {
+    const minS = all.reduce((m, x) => x.start < m ? x.start : m, all[0].start);
+    const maxE = all.reduce((m, x) => x.end > m ? x.end : m, all[0].end);
+    let y = +minS.slice(0,4), mo = +minS.slice(5,7) - 1;
+    const t0 = Date.UTC(y, mo, 1) / 864e5, months = [];
+    while (Date.UTC(y, mo, 1) / 864e5 <= day(maxE)) { months.push([y, mo]); if (++mo === 12) { mo = 0; y++; } }
+    const t1 = Date.UTC(y, mo, 1) / 864e5, span = t1 - t0;
+    const pct = d => ((d - t0) / span * 100) + '%';
+    let html = '<div class="months">' + months.map(([yy, mm]) => {
+      const w = (Date.UTC(yy, mm + 1, 1) - Date.UTC(yy, mm, 1)) / 864e5 / span * 100;
+      return `<div style="width:${w}%">T${mm + 1}/${yy}</div>`; }).join('') + '</div>';
+    for (const c of contests().filter(c => !hidden.has(c))) {
+      // greedy lanes so overlapping bars in one contest don't cover each other
+      const lanes = [], evs = all.filter(x => x.contest === c).sort((a, b) => day(a.start) - day(b.start));
+      const bars = evs.map(ev => {
+        let l = lanes.findIndex(end => end < day(ev.start));
+        if (l < 0) l = lanes.push(0) - 1;
+        lanes[l] = day(ev.end) + 1;
+        const single = ev.start === ev.end, w = (day(ev.end) - day(ev.start) + 1) / span * 100;
+        const cls = ['bar', single && 'single', ev.tentative && 'tentative', day(ev.end) < TODAY && 'past'].filter(Boolean).join(' ');
+        const left = single ? pct(day(ev.start) + .5) : pct(day(ev.start));
+        return `<div class="${cls}" data-id="${ev.id}" title="${esc(ev.title)} · ${range(ev)}" style="left:${left};width:${w}%;top:${6 + l * 28}px;background:${color(c)}">${single ? '' : esc(ev.title)}</div>`;
+      });
+      html += `<div class="row"><div class="row-label" style="color:${color(c)}">${esc(c)}</div><div class="track" style="height:${12 + lanes.length * 28}px">${bars.join('')}</div></div>`;
+    }
+    if (TODAY >= t0 && TODAY < t1) html += `<div class="today" style="left:calc(130px + (100% - 130px) * ${(TODAY + .5 - t0) / span})"><span>Hôm nay</span></div>`;
+    tl.innerHTML = html;
+  }
+
+  // filters
+  document.getElementById('filters').innerHTML = contests().map(c =>
+    `<label><input type="checkbox" data-contest="${esc(c)}" ${hidden.has(c) ? '' : 'checked'}> <span class="dot" style="background:${color(c)}"></span>${esc(c)}</label>`).join('');
+
+  // cards
+  const showPast = document.getElementById('showPast').checked;
+  const conflictIds = new Set(cf.flatMap(c => [c.a.id, c.b.id]));
+  document.getElementById('list').innerHTML = all
+    .filter(x => showPast || day(x.end) >= TODAY)
+    .sort((a, b) => day(a.start) - day(b.start) || day(a.end) - day(b.end))
+    .map(ev => {
+      const [label, cls] = countdown(ev);
+      const done = ev.checklist.filter(i => i.done).length;
+      return `<div class="card ev ${day(ev.end) < TODAY ? 'past' : ''}" data-id="${ev.id}" style="border-left-color:${color(ev.contest)}">
+        <div class="ev-top"><div>
+          <div class="muted">${esc(ev.contest)}${conflictIds.has(ev.id) ? ' · <span style="color:var(--amber)">⚠️ trùng lịch</span>' : ''}</div>
+          <b>${esc(ev.title)}</b>
+          <div>${range(ev)}${ev.tentative ? ' <span class="muted">(dự kiến)</span>' : ''}${ev.time ? ' · ' + esc(ev.time) : ''}${ev.place ? ' · 📍' + esc(ev.place) : ''}</div>
+        </div><span class="badge ${cls}">${label}</span></div>
+        ${ev.notes ? `<div class="muted">${esc(ev.notes)}</div>` : ''}
+        ${ev.checklist.length ? `<div class="muted" style="margin-top:6px">Chuẩn bị: ${done}/${ev.checklist.length}</div><ul>` + ev.checklist.map((it, i) =>
+          `<li class="${it.done ? 'done' : ''}"><label><input type="checkbox" data-check="${i}" ${it.done ? 'checked' : ''}>${esc(it.t)}</label></li>`).join('') + '</ul>' : ''}
+      </div>`;
+    }).join('') || '<p class="muted">Không có mốc nào sắp tới.</p>';
+}
+
+// --- interactions ---
+const dlg = document.getElementById('dlg'), form = document.getElementById('form');
+let editing = null;
+
+function openEditor(ev) {
+  editing = ev;
+  form.reset();
+  const v = ev || { contest:'', title:'', start:'', end:'', time:'', place:'', notes:'', tentative:false, checklist:[] };
+  for (const k of ['contest','title','start','time','place','notes']) form[k].value = v[k];
+  form.end.value = v.end && v.end !== v.start ? v.end : '';
+  form.tentative.checked = v.tentative;
+  form.checklist.value = v.checklist.map(i => i.t).join('\n');
+  document.getElementById('delBtn').style.visibility = ev ? 'visible' : 'hidden';
+  dlg.showModal();
+}
+
+dlg.addEventListener('close', () => {
+  if (dlg.returnValue !== 'save') return;
+  const f = form;
+  let end = f.end.value || f.start.value;
+  if (end < f.start.value) end = f.start.value;
+  const old = new Map((editing?.checklist || []).map(i => [i.t, i.done]));
+  const data = {
+    contest: f.contest.value.trim(), title: f.title.value.trim(), start: f.start.value, end,
+    time: f.time.value.trim(), place: f.place.value.trim(), notes: f.notes.value.trim(), tentative: f.tentative.checked,
+    checklist: f.checklist.value.split('\n').map(s => s.trim()).filter(Boolean).map(t => ({ t, done: old.get(t) || false })),
+  };
+  if (editing) Object.assign(editing, data); else events.push({ id: crypto.randomUUID(), ...data });
+  save(); render();
+});
+
+document.getElementById('delBtn').onclick = () => {
+  if (!editing || !confirm(`Xoá "${editing.title}"?`)) return;
+  events = events.filter(x => x !== editing);
+  dlg.close(); save(); render();
+};
+document.getElementById('addBtn').onclick = () => openEditor(null);
+document.getElementById('showPast').onchange = render;
+
+document.body.addEventListener('click', ev => {
+  const chk = ev.target.closest('[data-check]');
+  if (chk) {
+    const item = events.find(x => x.id === chk.closest('[data-id]').dataset.id).checklist[chk.dataset.check];
+    item.done = chk.checked; save(); render(); return;
+  }
+  if (ev.target.closest('label')) return;
+  const target = ev.target.closest('.bar, .ev');
+  if (target) openEditor(events.find(x => x.id === target.dataset.id));
+});
+document.getElementById('filters').addEventListener('change', ev => {
+  const c = ev.target.dataset.contest;
+  ev.target.checked ? hidden.delete(c) : hidden.add(c);
+  render();
+});
+
+// backup: localStorage lives only in this browser, so allow export/import
+document.getElementById('exportBtn').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(events, null, 2)], { type:'application/json' }));
+  a.download = 'lich-thi-2026.json'; a.click();
+};
+const fileIn = document.getElementById('fileIn');
+document.getElementById('importBtn').onclick = () => fileIn.click();
+fileIn.onchange = async () => {
+  try {
+    const data = JSON.parse(await fileIn.files[0].text());
+    if (!Array.isArray(data) || !data.every(x => x.id && x.contest && x.title && x.start && x.end && Array.isArray(x.checklist))) throw 0;
+    events = data; save(); render();
+  } catch { alert('File JSON không hợp lệ.'); }
+  fileIn.value = '';
+};
+
+// self-check for overlap logic
+{
+  const t = (c, s, en) => ({ contest:c, start:s, end:en || s });
+  const r = findConflicts([t('A','2099-01-05'), t('B','2099-01-05'), t('C','2099-01-01','2099-01-10'), t('A','2099-02-01'), t('D','2099-01-11')]);
+  console.assert(r.length === 3 && r.map(x => x.level).join() === '2,1,1', 'findConflicts broken', r);
+}
+
+render();
+</script>
+</body>
+</html>
