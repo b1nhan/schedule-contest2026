@@ -106,6 +106,17 @@
   .lane-dates { display:flex; justify-content:space-between; font-size:12px; color:var(--text-3); margin-top:4px; }
   .legend { display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--text-3); margin-left:auto; }
   .legend i { display:inline-block; width:16px; height:12px; border-inline:2px solid #d97706; background:repeating-linear-gradient(45deg, rgba(217,119,6,.45) 0 3px, transparent 3px 7px); }
+  .info-grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fill,minmax(min(100%,440px),1fr)); align-items:start; }
+  .info { padding:24px; display:flex; flex-direction:column; gap:12px; }
+  .info h3 { margin:0; font-size:16px; line-height:1.4; font-weight:600; }
+  .links { display:flex; flex-wrap:wrap; gap:8px; }
+  .links a { font-size:12px; font-weight:500; padding:4px 12px; border-radius:99px; background:var(--sunken); color:var(--text); text-decoration:none; }
+  .links a:hover { background:var(--line); }
+  .info a.mail { color:inherit; }
+  .facts { margin:0; padding-left:20px; color:var(--text-2); display:grid; gap:4px; }
+  .ask { background:var(--amber-bg); border-radius:8px; padding:12px 16px; }
+  .ask .eyebrow { color:var(--amber); }
+  .ask ul { margin:8px 0 0; padding-left:20px; display:grid; gap:4px; }
   @media (max-width:640px) { .lane { grid-template-columns:1fr; gap:4px; } .ov { padding:16px; } }
   .empty.ok { color:var(--green); font-weight:500; }
   .clash-ev { display:grid; gap:2px; }
@@ -213,6 +224,11 @@
     <div class="chips" id="filters" style="margin-bottom:24px"></div>
     <div id="list"></div>
   </section>
+
+  <section>
+    <div class="sec-head"><h2>Thông tin cuộc thi</h2><span class="muted" style="font-size:12px">cập nhật 28/09/2026 · "mùa trước" = thông tin năm cũ, cần kiểm tra</span></div>
+    <div class="info-grid" id="info"></div>
+  </section>
 </main>
 
 <dialog id="dlg">
@@ -248,41 +264,103 @@ const KEY = 'contest-schedule-2026';
 const COLORS = { 'Big Idea (UEH)':'#e11d48', 'ISB (UEH)':'#2563eb', 'DBC':'#059669', 'AISC (UIT)':'#7c3aed' };
 const FALLBACK = ['#ea580c','#0891b2','#ca8a04','#db2777','#4f46e5'];
 
-const e = (contest, title, start, end, extra = {}) => ({ id: crypto.randomUUID(), contest, title, start, end: end || start, time:'', place:'', notes:'', tentative:false, checklist:[], ...extra });
+// bump SEED_V whenever SEED/CONTESTS change so browsers with saved data pick up the new seed
+const SEED_V = 2;
+const e = (id, contest, title, start, end, extra = {}) => ({ id, seed:true, contest, title, start, end: end || start, time:'', place:'', notes:'', tentative:false, checklist:[], ...extra });
 const cl = (...items) => items.map(t => ({ t, done:false }));
 const SEED = [
-  e('Big Idea (UEH)', 'Chung kết (Final day)', '2026-10-01', null, { place:'UEH' }),
+  e('bi-final', 'Big Idea (UEH)', 'Chung kết (Final day)', '2026-10-01', null, { place:'UEH',
+    notes:'Chưa tìm thấy giờ / phòng / dress code công khai – hỏi BTC. Mùa 2024: Top 6 pitch tại Gala, bình chọn SV chiếm 10% điểm (vote fanpage + tại Gala).',
+    checklist: cl('Hỏi BTC: giờ check-in, phòng, dress code','Hỏi BTC: thời lượng pitch & Q&A, tiêu chí chấm','Nộp slide chung kết (hỏi hạn nộp)','Tập pitch + chuẩn bị Q&A','Kêu gọi bình chọn (nếu năm nay còn vote)') }),
 
-  e('AISC (UIT)', 'Vòng 1 · Khởi động – nộp hồ sơ', '2026-08-01', '2026-09-15', { checklist: cl('Đăng ký trực tuyến','Chọn chủ đề dự thi','Hoàn thiện hồ sơ','Nộp thuyết minh đề tài') }),
-  e('AISC (UIT)', 'Vòng 2 · Trình bày', '2026-10-15', null, { time:'08:00 - 16:30 (có mặt 07:30 nếu cần test thiết bị)', place:'UIT',
-    notes:'02 phút chuẩn bị + 15 phút trình bày & hỏi đáp. BTC công bố hướng dẫn poster trước 30/09. Không làm poster = không được vào Vòng 3 & Chung kết.',
-    checklist: cl('Mang & đeo thẻ sinh viên','Slide thuyết trình','Thiết kế poster','Mockup giao diện sản phẩm demo') }),
-  e('AISC (UIT)', 'Vòng 3 · Bình chọn & mentor (20% điểm)', '2026-10-20', '2026-10-31', {
-    notes:'Điểm bình chọn chỉ áp dụng cho Bảng 2.',
-    checklist: cl('Truyền thông, kêu gọi bình chọn poster','Làm việc với Mentor','Hoàn thiện sản phẩm') }),
-  e('AISC (UIT)', 'Vòng 4 · Chung kết (80% điểm)', '2026-11-26', null, { place:'UIT',
-    notes:'Bắt buộc có demo kết nối cơ sở dữ liệu.',
-    checklist: cl('Demo sản phẩm kết nối CSDL','Pitch Deck','Trưng bày poster','Chuẩn bị trả lời phản biện') }),
+  e('aisc-r1', 'AISC (UIT)', 'Vòng 1 · Khởi động – nộp hồ sơ', '2026-08-01', '2026-09-15', {
+    notes:'Kết quả công bố 25/09 – tra tại httt.uit.edu.vn/aisc/tra-cuu-ket-qua bằng email + mã hồ sơ AISC26-xxxx.',
+    checklist: cl('Đăng ký trực tuyến','Chọn chủ đề dự thi','Hoàn thiện hồ sơ','Nộp thuyết minh đề tài','Tra kết quả Vòng 1') }),
+  e('aisc-r2', 'AISC (UIT)', 'Vòng 2 · Trình bày', '2026-10-15', null, { time:'08:00 - 16:30 (có mặt 07:30 nếu cần test thiết bị)', place:'UIT (phòng: chờ BTC)',
+    notes:'2 phút chuẩn bị + 15 phút trình bày & hỏi đáp. Poster BẮT BUỘC (hạn 15/10) – không có poster thì không vào Vòng 3 & Chung kết. Hướng dẫn poster công bố trước 30/09.',
+    checklist: cl('Đọc hướng dẫn poster (trước 30/09)','Thiết kế & nộp poster','Slide thuyết trình','Mockup giao diện sản phẩm demo','Xem phòng thi & thứ tự trình bày trên fanpage','Mang & đeo thẻ sinh viên') }),
+  e('aisc-r3', 'AISC (UIT)', 'Vòng 3 · Bình chọn & mentor (20% điểm)', '2026-10-20', '2026-10-31', {
+    notes:'Bình chọn poster trên fanpage AISC: 1 react = 1đ, 1 share công khai = 3đ, tối đa 4đ/tài khoản/poster, phải like fanpage. Không tính: tài khoản < 100 bạn bè, share riêng tư, react "phẫn nộ". Điểm vote chỉ tính cho Bảng 2 (đội đã vào Vòng 2).',
+    checklist: cl('Kêu gọi react + share công khai poster','Nhắc người vote like fanpage','Đặt lịch mentor 1-1','Hoàn thiện sản phẩm') }),
+  e('aisc-final', 'AISC (UIT)', 'Vòng 4 · Chung kết (80% điểm)', '2026-11-26', null, { place:'UIT',
+    notes:'Demo BẮT BUỘC kết nối CSDL. Trao giải trong ngày. Chấm: nghiên cứu, sáng tạo, giải quyết vấn đề, trình bày, trả lời, demo; sản phẩm: thực tiễn, UI/UX, công nghệ, mở rộng, thương mại hoá, đóng góp XH.',
+    checklist: cl('Demo sản phẩm kết nối CSDL','Pitch Deck','Mang poster trưng bày','Chuẩn bị trả lời phản biện') }),
 
-  e('DBC', 'Đăng ký', '2026-09-10', '2026-09-28'),
-  e('DBC', 'Vòng Sơ loại', '2026-10-01', '2026-11-10'),
-  e('DBC', 'Vòng Loại', '2026-11-15', '2026-11-25'),
-  e('DBC', 'Vòng Bán kết', '2026-11-28', '2026-12-05'),
-  e('DBC', 'Chung kết & Gala', '2026-12-01', '2026-12-31', { tentative:true, notes:'BTC mới công bố "tháng 12/2026" – cập nhật khi có ngày chính xác.' }),
+  e('dbc-reg', 'DBC', 'Đăng ký', '2026-09-10', '2026-09-28', {
+    notes:'Đội 2–5 SV cùng trường, 18–25 tuổi. Chọn 1 nội dung: Bán hàng Online / Digital Marketing / Ý tưởng kinh doanh số.',
+    checklist: cl('Nộp form đăng ký (hạn 28/09)','Tải Booklet & bộ đề') }),
+  e('dbc-r1', 'DBC', 'Vòng Sơ loại', '2026-10-01', '2026-11-10', { notes:'Nộp online bản đề xuất dự án. Ngày/giờ nộp cụ thể: xem Booklet.',
+    checklist: cl('Viết đề xuất dự án','Nộp bài online (xem hạn giờ trong Booklet)') }),
+  e('dbc-r2', 'DBC', 'Vòng Loại', '2026-11-15', '2026-11-25', { notes:'Nộp đề xuất đã chỉnh sửa (hình thức chờ BTC).' }),
+  e('dbc-r3', 'DBC', 'Vòng Bán kết', '2026-11-28', '2026-12-05', { notes:'Chấm offline tại Hà Nội / Đà Nẵng / TP.HCM, nơi khác online. Mùa 2025: Bán kết 24 đội.' }),
+  e('dbc-final', 'DBC', 'Chung kết & Gala', '2026-12-01', '2026-12-31', { tentative:true, place:'Hà Nội (?)',
+    notes:'BTC mới công bố "tháng 12/2026". Trang chủ ghi Hà Nội nhưng trang giải thưởng nhắc vé máy bay + khách sạn TP.HCM – hỏi lại BTC. Mùa 2025: 19/12, thi thuyết trình + hùng biện + trắc nghiệm.' }),
 
-  e('ISB (UEH)', 'Qualifying · Trắc nghiệm online', '2026-09-21', '2026-09-27', { notes:'Mỗi SV 1 lượt, 30 phút: kinh tế, kinh doanh, công nghệ.' }),
-  e('ISB (UEH)', 'Ideation · Infographic', '2026-09-29', '2026-10-04', {
-    notes:'Top 120. 3 track: AI in Retail / E-Commerce / Finance & Banking.',
-    checklist: cl('Xác định vấn đề của doanh nghiệp','Đề xuất giải pháp','Làm infographic') }),
-  e('ISB (UEH)', 'Strategy Round', '2026-10-12', '2026-10-17', { notes:'Top 12.', checklist: cl('Kế hoạch triển khai chi tiết','Prototype giải pháp') }),
-  e('ISB (UEH)', 'Grand Finale & Awards Gala', '2026-11-15', null, { place:'UEH',
-    notes:'Top 6. Pitching tối đa 10 phút + 5 phút Q&A + 5 phút nhận xét.',
-    checklist: cl('Pitch deck từ Strategy Round','Tập pitch ≤ 10 phút','Chuẩn bị Q&A') }),
+  e('isb-q', 'ISB (UEH)', 'Qualifying · Trắc nghiệm online', '2026-09-21', '2026-09-27', { notes:'Mỗi thành viên 1 lượt, 30 phút. Điểm đội = trung bình 4 thành viên.' }),
+  e('isb-r2', 'ISB (UEH)', 'Ideation · Infographic', '2026-09-29', '2026-10-04', {
+    notes:'Top 120. Track đã chọn không đổi được. Đối tác (suy đoán, chưa xác nhận): Retail – KFC, E-Commerce – Shopee, Finance – Hong Leong Bank. Kích thước/định dạng infographic & giờ nộp: chờ case BTC.',
+    checklist: cl('Đọc case của doanh nghiệp','Xác định vấn đề của doanh nghiệp','Đề xuất giải pháp (AI)','Làm infographic (tiếng Anh)','Hỏi giờ nộp trên Padlet/fanpage') }),
+  e('isb-r3', 'ISB (UEH)', 'Strategy Round', '2026-10-12', '2026-10-17', { notes:'Top 12 → chọn Top 6 (nhiều khả năng đây là "Semi-Final").',
+    checklist: cl('Kế hoạch triển khai chi tiết','Prototype giải pháp') }),
+  e('isb-final', 'ISB (UEH)', 'Grand Finale & Awards Gala', '2026-11-15', null, { place:'TP.HCM (địa điểm chờ BTC)',
+    notes:'Top 6 (2 đội/track). Pitch ≤ 10 phút + 5 phút Q&A (bốc thăm giám khảo) + 5 phút nhận xét. Dress code chờ BTC.',
+    checklist: cl('Pitch deck từ Strategy Round','Tập pitch ≤ 10 phút (tiếng Anh)','Chuẩn bị Q&A') }),
 ];
 
+// contest-level reference info (from research 28/09/2026; "mùa trước" = previous edition, verify)
+const CONTESTS = {
+  'Big Idea (UEH)': {
+    name:'Cuộc thi Ý tưởng Khởi nghiệp Big Idea 2026', org:'CLB Sinh viên Khởi nghiệp Dynamic UEH – Đoàn TN UEH',
+    links:[['Fanpage','https://www.facebook.com/bigidea.dynamicueh/']],
+    contact:['cuocthibigidea.dynamicueh@gmail.com'],
+    facts:['Mùa 2024: 3 vòng Grabbing Chance → Showing Up (Top 20) → Shining (Top 6) → Gala chung kết (mùa trước)','Giải: Quán quân, Á quân, Hạng 3, Khuyến khích; Quán quân vé thẳng Top 100 Startup Wheel (mùa trước)'],
+    ask:['Giờ check-in, phòng, dress code ngày 01/10','Thời lượng pitch & Q&A, tiêu chí chấm','Hạn nộp slide chung kết, có tổng duyệt không','Năm nay còn bình chọn (10%) không'],
+  },
+  'AISC (UIT)': {
+    name:"Advanced Information Systems Contest 2026 (AISC'26)", org:'Khoa Hệ thống Thông tin – ĐH CNTT, ĐHQG-HCM',
+    links:[['Website','https://httt.uit.edu.vn/aisc/'],['Tra cứu kết quả','https://httt.uit.edu.vn/aisc/tra-cuu-ket-qua/'],['Fanpage','https://www.facebook.com/Cuocthihocthuat.AISC']],
+    contact:['aisc.httt@uit.edu.vn','028 3725 2002 (máy lẻ 119)'],
+    facts:['Đội 2–5 SV, được ghép khác trường','Chủ đề: Digital Business Ideas / Data Driven Business (không đổi sau Vòng 1)','Bảng 1 = đội không vào Vòng 2 (chỉ tranh giải Được yêu thích); Bảng 2 = đội đã vào Vòng 2 (vote = 20% điểm)','Giải (tổng ~100tr): Nhất 2×10tr, Nhì 2×7tr, Ba 2×5tr, KK 4×2tr, Được yêu thích 2×2tr, Thuyết trình ấn tượng 2×1tr'],
+    ask:['Kích thước / định dạng poster, hạn nộp file','Hạn nộp slide Vòng 2','Phòng thi & thứ tự trình bày 15/10','Lịch mentor Vòng 3'],
+  },
+  'DBC': {
+    name:'Cuộc thi Sinh viên Kinh doanh số 2026 (Digital Business Contest)', org:'Cục TMĐT & Kinh tế số (Bộ Công Thương), VECOM, VecomNet',
+    links:[['Website','https://dbc.vecomnet.vn'],['Thể lệ','https://dbc.vecomnet.vn/quyche2026'],['Giải thưởng','https://dbc.vecomnet.vn/giaithuong2026'],['Form đăng ký','https://forms.gle/mokryu3sQcb8ZzjAA'],['Booklet','https://drive.google.com/file/d/1aTdLba1Ro9SY7x8C7UkmJ3GGwADb3edO/view']],
+    contact:['vecomnet@vecom.vn','(+84) 24 6259 8271'],
+    facts:['Toàn quốc (không phải quốc tế). Đội 2–5 SV cùng trường, 18–25 tuổi, tối đa 10 đội/trường','3 nội dung: Bán hàng Online / Digital Marketing / Ý tưởng kinh doanh số; năm nay nhấn mạnh TMĐT xanh','Giải: Quán quân 50tr, Á quân 20tr, Quý quân 10tr, KK 5tr (trước thuế) + thực tập, mentoring','Đội tự túc đi lại, ăn ở (trừ tài trợ cho chung kết – xem trang giải thưởng)'],
+    ask:['Ngày/giờ nộp bài từng vòng, ngày công bố kết quả','Ngày & địa điểm chung kết (Hà Nội hay TP.HCM?)','Lịch workshop / Unitour tại trường'],
+  },
+  'ISB (UEH)': {
+    name:'Business Challenge 2026 (Season VIII)', org:'UEH.ISB Academic Team – UEH.ISB Honours College',
+    links:[['Website','https://uehisbacademicteam.com/business-challenge-2026/'],['Thể lệ','https://uehisbacademicteam.com/business-challenge-2026-official-regulations/'],['Hỏi đáp (Padlet)','https://padlet.com/UEHISBAcademicTeam/business-challenge-2026-competition-inquiries-46r1yqq33j9wup21'],['Fanpage','https://www.facebook.com/ueh.isbacademicteam']],
+    contact:['academicteam@isb.edu.vn','Ms. Bảo Ngọc – 090 332 8496'],
+    facts:['Chủ đề: "Innovating Business for a Sustainable and Inclusive Future"','Đội đúng 4 người, ≥ 1 người ngành công nghệ; thi bằng tiếng Anh','Giải mỗi track: Quán quân 36tr + cúp + học bổng, Á quân 24tr; Most Popular Team 8tr','Đối tác: Hong Leong Bank, Shopee, KFC, Kyanon Digital'],
+    ask:['Giờ nộp bài Ideation & Strategy','Ngày công bố Top 120 / Top 12 / Top 6','Doanh nghiệp của từng track, yêu cầu định dạng infographic','Địa điểm & dress code Grand Finale, lịch Training Day'],
+  },
+};
+
 let events;
-try { events = JSON.parse(localStorage.getItem(KEY)) || SEED; } catch { events = SEED; }
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(events)); } catch {} };
+try {
+  const raw = JSON.parse(localStorage.getItem(KEY));
+  const stored = Array.isArray(raw) ? { v:1, events:raw } : raw; // v1 saved a bare array
+  events = !stored ? SEED : stored.v === SEED_V ? stored.events : mergeSeed(stored.events);
+} catch { events = SEED; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ v:SEED_V, events })); } catch {} };
+
+// new seed wins, but keep ticked checklist items and user-added events.
+// old seed events are matched by id, or (for v1 data with random ids) by contest + dates.
+function mergeSeed(old) {
+  const used = new Set();
+  const merged = SEED.map(s => {
+    const o = old.find(x => !used.has(x) && (x.id === s.id || (x.contest === s.contest && x.start === s.start && x.end === s.end)));
+    if (!o) return s;
+    used.add(o);
+    const done = new Map(o.checklist.map(i => [i.t, i.done]));
+    return { ...s, checklist: s.checklist.map(i => ({ ...i, done: done.get(i.t) || false })) };
+  });
+  return [...merged, ...old.filter(x => !used.has(x) && !x.seed)];
+}
+save();
 
 // dates: 'YYYY-MM-DD' → day number (UTC, so no DST/timezone drift)
 const day = s => Date.UTC(+s.slice(0,4), +s.slice(5,7) - 1, +s.slice(8,10)) / 864e5;
@@ -467,6 +545,22 @@ function render() {
         </div>`;
       }).join('')}</div>
     </div>`).join('') || '<div class="card empty">Không có mốc nào sắp tới.</div>';
+  renderInfo();
+}
+
+function renderInfo() {
+  const contact = t => t.includes('@') ? `<a class="mail" href="mailto:${esc(t)}">${esc(t)}</a>` : esc(t);
+  document.getElementById('info').innerHTML = contests().filter(c => !hidden.has(c) && CONTESTS[c]).map(c => {
+    const i = CONTESTS[c];
+    return `<div class="card info">
+      ${contestLabel(c)}
+      <div><h3>${esc(i.name)}</h3><div class="muted">${esc(i.org)}</div></div>
+      <div class="links">${i.links.map(([l, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join('')}</div>
+      <div class="muted">${i.contact.map(contact).join(' · ')}</div>
+      <ul class="facts">${i.facts.map(f => `<li>${esc(f)}</li>`).join('')}</ul>
+      <div class="ask"><div class="eyebrow">Cần hỏi BTC</div><ul>${i.ask.map(q => `<li>${esc(q)}</li>`).join('')}</ul></div>
+    </div>`;
+  }).join('');
 }
 
 // --- interactions ---
