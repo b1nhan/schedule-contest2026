@@ -460,6 +460,8 @@ function render() {
           </div>
         </div>
         ${next.notes ? `<div class="after"><div class="eyebrow">Nội dung / lưu ý</div><p class="notes" style="margin:8px 0 0">${esc(next.notes)}</p></div>` : ''}
+        ${examDays.length > 1 ? `<div class="after"><div class="eyebrow">Các ngày thi sau đó</div><ul class="mini">${examDays.slice(1, 4).map(x => `
+          <li data-open="${x.id}"><span class="mini-date">${fmt(x.start)}</span>${who(x)}<span>${esc(x.title)} <span class="muted">· ${esc(x.contest)}${x.place ? ' · 📍 ' + esc(x.place) : ''} · còn ${day(x.start) - TODAY} ngày</span></span></li>`).join('')}</ul></div>` : ''}
       </div>` : '<p class="muted" style="margin:12px 0 0">Không còn ngày thi nào sắp tới.</p>'}
     </div>
     <div class="card">
