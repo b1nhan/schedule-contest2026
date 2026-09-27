@@ -30,7 +30,7 @@
     }
   }
   * { box-sizing:border-box; }
-  body { margin:0; font:14px/1.5 'Be Vietnam Pro',system-ui,sans-serif; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; }
+  body { margin:0; font:14px/1.7 'Be Vietnam Pro',system-ui,sans-serif; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; }
   main { max-width:max(1120px, 90vw); margin:0 auto; padding:32px 16px 64px; }
   button, input, textarea { font:inherit; color:inherit; }
   :focus-visible { outline:2px solid #6366f1; outline-offset:2px; }
@@ -74,7 +74,7 @@
   @media (max-width:1000px) { .dash { grid-template-columns:1fr 1fr; } .dash > :last-child { grid-column:1 / -1; } }
   @media (max-width:700px) { .dash, .split { grid-template-columns:1fr; } }
   .next-main { display:flex; gap:24px; align-items:flex-start; }
-  .next-num { text-align:center; min-width:64px; }
+  .next-num { text-align:center; min-width:72px; padding:12px 8px; border-radius:12px; background:var(--sunken); }
   .next-num b { display:block; font-size:48px; line-height:1; font-weight:700; letter-spacing:-.02em; }
   .next-num span { color:var(--text-3); font-size:14px; }
   .next h3 { margin:4px 0 8px; font-size:20px; line-height:1.25; font-weight:600; }
@@ -185,6 +185,10 @@
   .notes { color:var(--text-3); font-size:14px; }
   .badge { font-size:12px; font-weight:600; padding:2px 8px; border-radius:99px; background:var(--sunken); color:var(--text-2); white-space:nowrap; }
   .badge.soon { background:var(--red-bg); color:var(--red); }
+  .next-num.urgent { background:#dc2626; } .next-num.urgent b, .next-num.urgent span { color:#fff; }
+  .next-num.warn { background:#f59e0b; } .next-num.warn b, .next-num.warn span { color:#1c1917; }
+  mark { font-weight:600; padding:0 4px; border-radius:4px; background:var(--red-bg); color:var(--red); }
+  mark.amber { background:var(--amber-bg); color:var(--amber); }
   .badge.now { background:var(--green-bg); color:var(--green); }
   .tag { font-size:12px; font-weight:600; color:var(--amber); }
   .checklist { border-top:1px solid var(--line); padding-top:12px; margin-top:4px; }
@@ -417,10 +421,14 @@ function findClashes(list) {
   return [...byDate].filter(([, evs]) => new Set(evs.map(x => x.contest)).size > 1).sort(([a], [b]) => a < b ? -1 : 1);
 }
 
+const hl = t => esc(t)
+  .replace(/BẮT BUỘC|hạn \d{1,2}\/\d{1,2}|trước \d{1,2}\/\d{1,2}/gi, m => `<mark>${m}</mark>`)
+  .replace(/\d+% (tổng )?điểm/g, m => `<mark class="amber">${m}</mark>`);
+
 function countdown(ev) {
   const s = day(ev.start) - TODAY, en = day(ev.end) - TODAY;
   if (en < 0) return ['Đã qua', ''];
-  if (s <= 0) return [ev.start === ev.end ? 'Hôm nay' : en ? `Đang diễn ra · còn ${en} ngày` : 'Ngày cuối', 'now'];
+  if (s <= 0) return [ev.start === ev.end ? 'Hôm nay' : en ? `Đang diễn ra · còn ${en} ngày` : 'Ngày cuối', ev.start === ev.end || en <= 2 ? 'soon' : 'now'];
   return [s === 1 ? 'Ngày mai' : `còn ${s} ngày`, s <= 7 ? 'soon' : ''];
 }
 
@@ -451,7 +459,7 @@ function render() {
       <div class="eyebrow">Ngày thi tiếp theo</div>
       ${next ? `<div class="col-body">
         <div class="next-main" data-open="${next.id}">
-          <div class="next-num"><b>${d || 'Nay'}</b><span>${d === 0 ? 'hôm nay' : d === 1 ? 'ngày mai' : 'ngày nữa'}</span></div>
+          <div class="next-num ${d <= 3 ? 'urgent' : d <= 7 ? 'warn' : ''}"><b>${d || 'Nay'}</b><span>${d === 0 ? 'hôm nay' : d === 1 ? 'ngày mai' : 'ngày nữa'}</span></div>
           <div style="flex:1;min-width:0">
             ${contestLabel(next.contest)}
             <h3>${esc(next.title)}</h3>
@@ -459,7 +467,7 @@ function render() {
             <div class="place">📍 ${next.place ? esc(next.place) : '<span class="muted">Chưa có địa điểm</span>'}</div>
           </div>
         </div>
-        ${next.notes ? `<div class="after"><div class="eyebrow">Nội dung / lưu ý</div><p class="notes" style="margin:8px 0 0">${esc(next.notes)}</p></div>` : ''}
+        ${next.notes ? `<div class="after"><div class="eyebrow">Nội dung / lưu ý</div><p class="notes" style="margin:8px 0 0">${hl(next.notes)}</p></div>` : ''}
         ${examDays.length > 1 ? `<div class="after"><div class="eyebrow">Các ngày thi sau đó</div><ul class="mini">${examDays.slice(1, 4).map(x => `
           <li data-open="${x.id}"><span class="mini-date">${fmt(x.start)}</span>${who(x)}<span>${esc(x.title)} <span class="muted">· ${esc(x.contest)}${x.place ? ' · 📍 ' + esc(x.place) : ''} · còn ${day(x.start) - TODAY} ngày</span></span></li>`).join('')}</ul></div>` : ''}
       </div>` : '<p class="muted" style="margin:12px 0 0">Không còn ngày thi nào sắp tới.</p>'}
@@ -469,7 +477,7 @@ function render() {
       <div class="col-body">${todos.map(x => `
         <div class="todo" data-id="${x.id}">
           <div class="todo-head"><span data-open="${x.id}">${who(x)} <b style="font-weight:600">${esc(x.title)}</b> <span class="muted" style="font-size:12px">· ${esc(x.contest)}</span></span><span class="badge ${countdown(x)[1]}">${countdown(x)[0].replace('Đang diễn ra · ', '')}</span></div>
-          <ul>${x.checklist.map((it, i) => it.done ? '' : `<li><label><input type="checkbox" data-check="${i}">${esc(it.t)}</label></li>`).join('')}</ul>
+          <ul>${x.checklist.map((it, i) => it.done ? '' : `<li><label><input type="checkbox" data-check="${i}"><span>${hl(it.t)}</span></label></li>`).join('')}</ul>
         </div>`).join('') || '<p class="muted">✓ Không còn việc nào trong 14 ngày tới.</p>'}</div>
     </div>
     <div class="card">
@@ -486,7 +494,7 @@ function render() {
         ${running.length ? '<div style="margin-top:12px">' + running.map(x => {
           const total = day(x.end) - day(x.start) + 1, gone = TODAY - day(x.start) + 1;
           return `<div class="phase" data-open="${x.id}" style="--c:${color(x.contest)}">
-            <div class="phase-top"><span>${who(x)} <b style="font-weight:500">${esc(x.title)}</b></span><span class="muted" style="font-size:12px;white-space:nowrap">${countdown(x)[0].replace('Đang diễn ra · ', '')}</span></div>
+            <div class="phase-top"><span>${who(x)} <b style="font-weight:500">${esc(x.title)}</b></span><span class="badge ${countdown(x)[1]}">${countdown(x)[0].replace('Đang diễn ra · ', '')}</span></div>
             <div class="muted" style="font-size:12px">${esc(x.contest)} · ${range(x)}</div>
             <div class="progress"><i style="width:${gone / total * 100}%"></i></div>
           </div>`; }).join('') + '</div>'
@@ -599,10 +607,10 @@ function render() {
           <h3>${esc(ev.title)}</h3>
           ${metaLine(ev)}
           ${clashIds.has(ev.id) ? '<div class="tag" style="color:var(--red)">⚠ Trùng ngày thi với cuộc thi khác</div>' : ''}
-          ${ev.notes ? `<div class="notes">${esc(ev.notes)}</div>` : ''}
+          ${ev.notes ? `<div class="notes">${hl(ev.notes)}</div>` : ''}
           ${ev.checklist.length ? `<div class="checklist">
             <div class="checklist-head"><span>Cần chuẩn bị</span><span>${done}/${ev.checklist.length}</span></div>${progress(ev)}
-            <ul>${ev.checklist.map((it, i) => `<li class="${it.done ? 'done' : ''}"><label><input type="checkbox" data-check="${i}" ${it.done ? 'checked' : ''}>${esc(it.t)}</label></li>`).join('')}</ul>
+            <ul>${ev.checklist.map((it, i) => `<li class="${it.done ? 'done' : ''}"><label><input type="checkbox" data-check="${i}" ${it.done ? 'checked' : ''}><span>${hl(it.t)}</span></label></li>`).join('')}</ul>
           </div>` : ''}
         </div>`;
       }).join('')}</div>
