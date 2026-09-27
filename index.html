@@ -89,6 +89,24 @@
   details summary:hover { color:var(--text); }
   details .cf { opacity:.75; }
   .empty { padding:24px; color:var(--text-3); }
+
+  /* period overlaps: per-pair mini timeline, hatched band = shared days */
+  .ov { padding:16px 24px; border-top:1px solid var(--line); }
+  .ov:first-child { border-top:none; }
+  .ov-head { display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; margin-bottom:8px; }
+  .ov-kind { font-size:12px; font-weight:600; padding:0 8px; border-radius:99px; background:var(--amber-bg); color:var(--amber); }
+  .lane { display:grid; grid-template-columns:minmax(0,300px) 1fr; gap:16px; align-items:center; padding:4px 0; }
+  .lane-label { display:flex; gap:8px; align-items:center; min-width:0; }
+  .lane-label > span:last-child { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lane-track { position:relative; height:20px; border-radius:6px; background:var(--sunken); }
+  .lane-bar { position:absolute; top:4px; bottom:4px; border-radius:4px; }
+  .lane-bar.single { width:12px !important; top:4px; bottom:auto; height:12px; transform:translateX(-6px) rotate(45deg); border-radius:2px; }
+  .band { position:absolute; top:-4px; bottom:-4px; pointer-events:none; border-inline:2px solid #d97706;
+          background:repeating-linear-gradient(45deg, rgba(217,119,6,.45) 0 3px, transparent 3px 7px); }
+  .lane-dates { display:flex; justify-content:space-between; font-size:12px; color:var(--text-3); margin-top:4px; }
+  .legend { display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--text-3); margin-left:auto; }
+  .legend i { display:inline-block; width:16px; height:12px; border-inline:2px solid #d97706; background:repeating-linear-gradient(45deg, rgba(217,119,6,.45) 0 3px, transparent 3px 7px); }
+  @media (max-width:640px) { .lane { grid-template-columns:1fr; gap:4px; } .ov { padding:16px; } }
   .empty.ok { color:var(--green); font-weight:500; }
   .clash-ev { display:grid; gap:2px; }
   .clash-ev + .clash-ev { margin-top:8px; }
@@ -178,7 +196,7 @@
   <section><div class="hero" id="hero"></div></section>
 
   <section>
-    <div class="sec-head"><h2>Giai đoạn chồng lấn</h2><span class="count" id="cfCount"></span></div>
+    <div class="sec-head"><h2>Giai đoạn chồng lấn</h2><span class="count" id="cfCount"></span><span class="legend"><i></i>những ngày bị chồng</span></div>
     <div class="card conflicts" id="conflicts"></div>
   </section>
 
@@ -364,16 +382,27 @@ function render() {
       `<span class="day-chip ${clashIds.has(x.id) ? 'clash' : ''}" data-open="${x.id}"><b>${fmt(x.start)}</b><span class="dot" style="background:${color(x.contest)}"></span>${esc(x.title)}</span>`).join('')}</div></div>` : '');
 
   // secondary: periods overlapping (a round running while another round / exam day happens)
-  const cf = findConflicts(all).filter(c => c.level < 2);
+  const cf = findConflicts(all).filter(c => c.level < 2).sort((x, y) => x.from - y.from || y.level - x.level);
   document.getElementById('cfCount').textContent = cf.length;
-  document.getElementById('conflicts').innerHTML = cf.map(c => `
-    <div class="cf">
-      <div class="cf-date"><b>${dstr(c.from).slice(8,10)}</b><span>Th${+dstr(c.from).slice(5,7)}</span></div>
-      <div style="min-width:0">
-        <div class="cf-type">${c.level ? 'Ngày thi rơi vào giai đoạn khác' : 'Hai giai đoạn chạy song song'}${c.from === c.to ? '' : ` · đến ${fmt(dstr(c.to))}`}</div>
-        ${[c.a, c.b].map(x => `<div class="cf-ev"><span class="dot" style="background:${color(x.contest)}"></span><span><b style="font-weight:500">${esc(x.title)}</b> <span class="muted">· ${esc(x.contest)} · ${range(x)}</span></span></div>`).join('')}
-      </div>
-    </div>`).join('') || '<div class="empty">Không có giai đoạn nào chồng lấn.</div>';
+  document.getElementById('conflicts').innerHTML = cf.map(c => {
+    // local scale per pair so short overlaps stay visible
+    const lo = Math.min(day(c.a.start), day(c.b.start)), hi = Math.max(day(c.a.end), day(c.b.end)) + 1, span = hi - lo;
+    const p = d => (d - lo) / span * 100, n = c.to - c.from + 1;
+    const band = `<i class="band" style="left:${p(c.from)}%;width:${n / span * 100}%"></i>`;
+    const lane = x => {
+      const single = x.start === x.end;
+      return `<div class="lane" data-open="${x.id}">
+        <div class="lane-label"><span class="dot" style="background:${color(x.contest)}"></span><span><b style="font-weight:500">${esc(x.title)}</b> <span class="muted">· ${esc(x.contest)}</span></span></div>
+        <div class="lane-track"><div class="lane-bar ${single ? 'single' : ''}" style="left:${single ? p(day(x.start) + .5) : p(day(x.start))}%;width:${(day(x.end) - day(x.start) + 1) / span * 100}%;background:${color(x.contest)}"></div>${band}</div>
+      </div>`;
+    };
+    return `<div class="ov">
+      <div class="ov-head"><b>${n === 1 ? fmt(dstr(c.from)) : fmt(dstr(c.from)) + ' → ' + fmt(dstr(c.to))}</b><span class="muted">${n} ngày chung</span>
+        <span class="ov-kind">${c.level ? 'Ngày thi giữa giai đoạn khác' : 'Hai giai đoạn song song'}</span></div>
+      ${lane(c.a)}${lane(c.b)}
+      <div class="lane"><span></span><div class="lane-dates"><span>${fmt(dstr(lo))}</span><span>${fmt(dstr(hi - 1))}</span></div></div>
+    </div>`;
+  }).join('') || '<div class="empty">Không có giai đoạn nào chồng lấn.</div>';
 
   // timeline: whole months spanning all events
   const tl = document.getElementById('timeline');
