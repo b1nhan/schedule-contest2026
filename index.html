@@ -4,102 +4,208 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lịch thi 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#f6f7f9; --card:#fff; --text:#1d2330; --muted:#6b7280; --line:#e3e6eb; --red:#dc2626; --amber:#d97706; }
+  /* scales — spacing: 4 8 12 16 24 32 48 · type: 12 14 16 20 24 36 */
+  :root {
+    --bg:#f8fafc; --surface:#fff; --sunken:#f1f5f9;
+    --text:#0f172a; --text-2:#475569; --text-3:#64748b; --line:#e2e8f0;
+    --primary:#0f172a; --on-primary:#fff;
+    --red:#b91c1c; --red-bg:#fef2f2; --amber:#b45309; --amber-bg:#fffbeb; --amber-line:#fde68a;
+    --green:#15803d; --green-bg:#f0fdf4;
+    --shadow-sm:0 1px 2px rgba(15,23,42,.06), 0 1px 3px rgba(15,23,42,.04);
+    --shadow-xl:0 20px 25px -5px rgba(15,23,42,.15), 0 8px 10px -6px rgba(15,23,42,.1);
+    --radius:12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0b1120; --surface:#111827; --sunken:#1e293b;
+      --text:#f1f5f9; --text-2:#cbd5e1; --text-3:#94a3b8; --line:#1e293b;
+      --primary:#f1f5f9; --on-primary:#0f172a;
+      --red:#fca5a5; --red-bg:#3b1414; --amber:#fcd34d; --amber-bg:#2a1f0a; --amber-line:#4a3510;
+      --green:#86efac; --green-bg:#0f2a1a;
+      --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+    }
+  }
   * { box-sizing:border-box; }
-  body { margin:0; font:15px/1.5 system-ui,sans-serif; background:var(--bg); color:var(--text); }
-  main { max-width:1100px; margin:0 auto; padding:16px; }
-  h1 { margin:0; font-size:22px; }
-  h2 { font-size:16px; margin:24px 0 8px; }
-  header { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
-  button { font:inherit; padding:6px 12px; border:1px solid var(--line); border-radius:8px; background:var(--card); cursor:pointer; }
-  button.primary { background:var(--text); color:#fff; border-color:var(--text); }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
-  .muted { color:var(--muted); font-size:13px; }
-  .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; }
+  body { margin:0; font:14px/1.5 'Be Vietnam Pro',system-ui,sans-serif; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; }
+  main { max-width:1120px; margin:0 auto; padding:32px 16px 64px; }
+  button, input, textarea { font:inherit; color:inherit; }
+  :focus-visible { outline:2px solid #6366f1; outline-offset:2px; }
+
+  header { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:32px; }
+  h1 { margin:0; font-size:24px; line-height:1.25; font-weight:700; letter-spacing:-.01em; }
+  .sub { color:var(--text-3); margin-top:4px; }
+  section { margin-top:48px; }
+  .sec-head { display:flex; align-items:center; gap:8px; margin-bottom:16px; }
+  h2 { margin:0; font-size:16px; font-weight:600; }
+  .count { font-size:12px; font-weight:600; padding:0 8px; border-radius:99px; background:var(--sunken); color:var(--text-2); }
+  .eyebrow { font-size:12px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--text-3); }
+  .muted { color:var(--text-3); }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; flex:none; }
+
+  .btn { display:inline-flex; align-items:center; gap:4px; height:36px; padding:0 16px; border-radius:8px; border:1px solid transparent; background:none; cursor:pointer; font-weight:500; color:var(--text-2); }
+  .btn:hover { background:var(--sunken); color:var(--text); }
+  .btn.primary { background:var(--primary); color:var(--on-primary); box-shadow:var(--shadow-sm); }
+  .btn.primary:hover { opacity:.9; }
+  .btn.danger { color:var(--red); }
+  .btn.danger:hover { background:var(--red-bg); }
+
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); }
+  [data-open] { cursor:pointer; transition:border-color .15s; }
+  .card[data-open]:hover { border-color:var(--text-3); }
+
+  /* hero */
+  .hero { display:grid; grid-template-columns:2fr 1fr; gap:16px; }
+  .next { display:flex; gap:32px; padding:32px; align-items:center; }
+  .next-num { text-align:center; min-width:96px; }
+  .next-num b { display:block; font-size:48px; line-height:1; font-weight:700; letter-spacing:-.02em; }
+  .next-num span { color:var(--text-3); font-size:14px; }
+  .next h3 { margin:4px 0 8px; font-size:20px; line-height:1.25; font-weight:600; }
+  .ongoing { padding:24px; }
+  .ongoing ul { list-style:none; margin:12px 0 0; padding:0; display:grid; gap:12px; }
+  .ongoing li { display:flex; gap:8px; align-items:baseline; }
+  .ongoing li .dot { transform:translateY(-1px); }
+  @media (max-width:760px) { .hero { grid-template-columns:1fr; } .next { flex-direction:column; align-items:flex-start; gap:16px; padding:24px; } .next-num { text-align:left; } }
+
+  .progress { height:4px; border-radius:99px; background:var(--sunken); overflow:hidden; margin-top:8px; }
+  .progress i { display:block; height:100%; background:var(--green); border-radius:99px; }
+
+  /* conflicts */
+  .conflicts { overflow:hidden; }
+  .cf { display:flex; gap:16px; padding:16px 24px; border-top:1px solid var(--line); }
+  .cf:first-child { border-top:none; }
+  .cf-date { width:56px; flex:none; text-align:center; padding:4px 0; border-radius:8px; background:var(--amber-bg); color:var(--amber); line-height:1.2; }
+  .cf-date b { display:block; font-size:20px; }
+  .cf-date span { font-size:12px; }
+  .cf.hard .cf-date { background:var(--red-bg); color:var(--red); }
+  .cf-type { font-size:12px; font-weight:600; color:var(--amber); margin-bottom:4px; }
+  .cf.hard .cf-type { color:var(--red); }
+  .cf-ev { display:flex; gap:8px; align-items:baseline; }
+  .cf-ev .dot { transform:translateY(-1px); }
+  details summary { cursor:pointer; padding:12px 24px; color:var(--text-3); border-top:1px solid var(--line); list-style-position:inside; }
+  details summary:hover { color:var(--text); }
+  details .cf { opacity:.75; }
+  .empty { padding:24px; color:var(--text-3); }
 
   /* timeline */
-  .tl { overflow-x:auto; }
-  .tl-inner { min-width:760px; position:relative; }
-  .months { display:flex; margin-left:130px; border-bottom:1px solid var(--line); }
-  .months div { font-size:12px; color:var(--muted); border-left:1px solid var(--line); padding-left:4px; }
-  .row { display:flex; border-bottom:1px dashed var(--line); }
-  .row-label { width:130px; flex:none; font-size:13px; font-weight:600; padding:6px 6px 6px 0; }
+  .tl { overflow-x:auto; padding:16px 24px 24px; }
+  .tl-inner { min-width:760px; position:relative; --lw:120px; padding-top:24px; }
+  .months { display:flex; margin-left:var(--lw); height:32px; align-items:center; }
+  .months div { font-size:12px; font-weight:600; color:var(--text-3); padding-left:8px; }
+  .grid-lines { position:absolute; top:24px; bottom:0; left:var(--lw); right:0; pointer-events:none; }
+  .grid-lines i { position:absolute; top:0; bottom:0; width:1px; background:var(--line); }
+  .row { display:flex; border-top:1px solid var(--line); }
+  .row-label { width:var(--lw); flex:none; font-size:12px; font-weight:600; padding:12px 8px 0 0; display:flex; gap:8px; align-items:baseline; }
   .track { position:relative; flex:1; }
-  .bar { position:absolute; height:24px; border-radius:6px; color:#fff; font-size:12px; padding:2px 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; min-width:10px; }
-  .bar.single { border-radius:50%; width:14px !important; padding:0; transform:translateX(-7px); outline:2px solid #fff; }
-  .bar.tentative { opacity:.55; background-image:repeating-linear-gradient(45deg,transparent 0 6px,rgba(255,255,255,.35) 6px 12px); }
-  .bar.past { filter:grayscale(.8); opacity:.5; }
-  .today { position:absolute; top:0; bottom:0; width:2px; background:var(--red); z-index:2; pointer-events:none; }
-  .today span { position:absolute; top:-18px; left:-22px; white-space:nowrap; font-size:11px; color:var(--red); }
+  .bar { position:absolute; height:24px; border-radius:6px; color:#fff; font-size:12px; font-weight:500; line-height:24px; padding:0 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:8px; }
+  .bar:hover { filter:brightness(1.1); }
+  .bar.single { width:14px !important; height:14px; padding:0; margin-top:5px; transform:translateX(-7px) rotate(45deg); border-radius:3px; box-shadow:0 0 0 2px var(--surface); }
+  .bar.tentative { opacity:.6; background-image:repeating-linear-gradient(45deg,transparent 0 6px,rgba(255,255,255,.3) 6px 12px); }
+  .bar.past { opacity:.35; }
+  .today { position:absolute; top:20px; bottom:0; width:2px; margin-left:-1px; background:var(--red); z-index:2; pointer-events:none; }
+  .today span { position:absolute; top:-20px; left:50%; transform:translateX(-50%); white-space:nowrap; font-size:12px; font-weight:600; color:#fff; background:var(--red); padding:0 8px; border-radius:99px; line-height:20px; }
+  @media (prefers-color-scheme: dark) { .today span { color:#0f172a; } }
 
-  /* lists */
-  .grid { display:grid; gap:10px; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); }
-  .ev { border-left:5px solid; cursor:pointer; }
+  /* list */
+  .toolbar { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:24px; }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; }
+  .chip { display:inline-flex; align-items:center; gap:8px; height:32px; padding:0 12px; border-radius:99px; border:1px solid var(--line); background:var(--surface); cursor:pointer; font-weight:500; color:var(--text-3); }
+  .chip[aria-pressed="true"] { color:var(--text); border-color:var(--text-3); }
+  .chip[aria-pressed="false"] .dot { background:var(--line) !important; }
+  .toggle { display:flex; gap:8px; align-items:center; color:var(--text-2); cursor:pointer; }
+  .month + .month { margin-top:32px; }
+  .month-head { margin-bottom:12px; }
+  .grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); align-items:start; }
+  .ev { padding:20px 24px; display:flex; flex-direction:column; gap:8px; }
   .ev.past { opacity:.55; }
-  .ev-top { display:flex; justify-content:space-between; gap:8px; }
-  .badge { font-size:12px; padding:1px 8px; border-radius:99px; background:var(--bg); white-space:nowrap; align-self:flex-start; }
-  .badge.soon { background:#fee2e2; color:var(--red); font-weight:600; }
-  .badge.now { background:#dcfce7; color:#15803d; font-weight:600; }
-  .ev ul { list-style:none; padding:0; margin:6px 0 0; font-size:13px; }
-  .ev li label { display:flex; gap:6px; align-items:flex-start; }
-  .ev li.done { color:var(--muted); text-decoration:line-through; }
-  .conflict { border-left:5px solid var(--amber); margin-bottom:8px; }
-  .conflict.hard { border-color:var(--red); }
-  .filters { display:flex; gap:12px; flex-wrap:wrap; font-size:13px; }
+  .ev-top { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .ev-contest { display:flex; gap:8px; align-items:center; }
+  .ev h3 { margin:0; font-size:16px; line-height:1.4; font-weight:600; }
+  .meta { color:var(--text-2); display:flex; flex-wrap:wrap; column-gap:12px; }
+  .notes { color:var(--text-3); font-size:14px; }
+  .badge { font-size:12px; font-weight:600; padding:2px 8px; border-radius:99px; background:var(--sunken); color:var(--text-2); white-space:nowrap; }
+  .badge.soon { background:var(--red-bg); color:var(--red); }
+  .badge.now { background:var(--green-bg); color:var(--green); }
+  .tag { font-size:12px; font-weight:600; color:var(--amber); }
+  .checklist { border-top:1px solid var(--line); padding-top:12px; margin-top:4px; }
+  .checklist-head { display:flex; justify-content:space-between; font-size:12px; color:var(--text-3); }
+  .checklist ul { list-style:none; padding:0; margin:12px 0 0; display:grid; gap:8px; }
+  .checklist label { display:flex; gap:8px; align-items:flex-start; cursor:pointer; }
+  .checklist input { margin:3px 0 0; accent-color:var(--green); width:16px; height:16px; flex:none; }
+  .checklist li.done { color:var(--text-3); text-decoration:line-through; }
 
-  dialog { border:none; border-radius:12px; padding:0; width:min(520px,100% - 32px); }
-  dialog form { padding:16px; display:grid; gap:10px; }
-  dialog label { display:grid; gap:2px; font-size:13px; color:var(--muted); }
-  dialog input, dialog textarea { font:inherit; padding:6px 8px; border:1px solid var(--line); border-radius:6px; color:var(--text); }
-  .two { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .actions { display:flex; justify-content:space-between; gap:8px; }
+  /* dialog */
+  dialog { border:none; border-radius:16px; padding:0; width:min(560px,100% - 32px); background:var(--surface); color:var(--text); box-shadow:var(--shadow-xl); }
+  dialog::backdrop { background:rgba(15,23,42,.4); }
+  dialog form { padding:32px; display:grid; gap:16px; }
+  dialog h2 { font-size:20px; }
+  .field { display:grid; gap:4px; font-size:12px; font-weight:500; color:var(--text-2); }
+  .field input, .field textarea { font-size:14px; font-weight:400; padding:8px 12px; border:1px solid var(--line); border-radius:8px; background:var(--surface); }
+  .field input { height:40px; }
+  .field input:focus, .field textarea:focus { outline:none; border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.2); }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:520px) { .two { grid-template-columns:1fr; } dialog form { padding:24px; } }
+  .actions { display:flex; justify-content:space-between; gap:8px; margin-top:8px; }
 </style>
 </head>
 <body>
 <main>
   <header>
-    <div><h1>Lịch thi 2026</h1><div class="muted" id="todayText"></div></div>
+    <div><h1>Lịch thi 2026</h1><div class="sub" id="todayText"></div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button id="exportBtn">Xuất JSON</button>
-      <button id="importBtn">Nhập JSON</button>
-      <button class="primary" id="addBtn">+ Thêm mốc</button>
+      <button class="btn" id="exportBtn">Xuất JSON</button>
+      <button class="btn" id="importBtn">Nhập JSON</button>
+      <button class="btn primary" id="addBtn">+ Thêm mốc</button>
     </div>
   </header>
 
-  <h2>⚠️ Lịch trùng nhau</h2>
-  <div id="conflicts"></div>
+  <div class="hero" id="hero"></div>
 
-  <h2>Timeline</h2>
-  <div class="card tl"><div class="tl-inner" id="timeline"></div></div>
+  <section>
+    <div class="sec-head"><h2>Lịch trùng nhau</h2><span class="count" id="cfCount"></span></div>
+    <div class="card conflicts" id="conflicts"></div>
+  </section>
 
-  <h2>Các mốc</h2>
-  <div class="filters" id="filters"></div>
-  <p class="filters"><label><input type="checkbox" id="showPast"> Hiện mốc đã qua</label></p>
-  <div class="grid" id="list"></div>
+  <section>
+    <div class="sec-head"><h2>Timeline</h2></div>
+    <div class="card tl"><div class="tl-inner" id="timeline"></div></div>
+  </section>
+
+  <section>
+    <div class="toolbar">
+      <div class="sec-head" style="margin:0"><h2>Tất cả các mốc</h2></div>
+      <label class="toggle"><input type="checkbox" id="showPast"> Hiện mốc đã qua</label>
+    </div>
+    <div class="chips" id="filters" style="margin-bottom:24px"></div>
+    <div id="list"></div>
+  </section>
 </main>
 
 <dialog id="dlg">
   <form method="dialog" id="form">
-    <label>Cuộc thi <input name="contest" list="contests" required></label>
+    <h2 id="dlgTitle"></h2>
+    <label class="field">Cuộc thi <input name="contest" list="contests" required></label>
     <datalist id="contests"></datalist>
-    <label>Tên mốc / vòng <input name="title" required></label>
+    <label class="field">Tên mốc / vòng <input name="title" required></label>
     <div class="two">
-      <label>Từ ngày <input type="date" name="start" required></label>
-      <label>Đến ngày (bỏ trống nếu 1 ngày) <input type="date" name="end"></label>
+      <label class="field">Từ ngày <input type="date" name="start" required></label>
+      <label class="field">Đến ngày (bỏ trống nếu 1 ngày) <input type="date" name="end"></label>
     </div>
     <div class="two">
-      <label>Giờ <input name="time" placeholder="08:00 - 16:30"></label>
-      <label>Địa điểm <input name="place"></label>
+      <label class="field">Giờ <input name="time" placeholder="08:00 - 16:30"></label>
+      <label class="field">Địa điểm <input name="place"></label>
     </div>
-    <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" name="tentative"> Ngày chưa chính thức</label>
-    <label>Cần chuẩn bị (mỗi dòng 1 việc) <textarea name="checklist" rows="5"></textarea></label>
-    <label>Ghi chú <textarea name="notes" rows="3"></textarea></label>
+    <label class="toggle"><input type="checkbox" name="tentative"> Ngày chưa chính thức</label>
+    <label class="field">Cần chuẩn bị (mỗi dòng 1 việc) <textarea name="checklist" rows="5"></textarea></label>
+    <label class="field">Ghi chú <textarea name="notes" rows="3"></textarea></label>
     <div class="actions">
-      <button type="button" id="delBtn" style="color:var(--red)">Xoá</button>
+      <button type="button" class="btn danger" id="delBtn">Xoá</button>
       <span style="display:flex;gap:8px">
-        <button value="cancel" formnovalidate>Huỷ</button>
-        <button class="primary" value="save">Lưu</button>
+        <button class="btn" value="cancel" formnovalidate>Huỷ</button>
+        <button class="btn primary" value="save">Lưu</button>
       </span>
     </div>
   </form>
@@ -152,10 +258,12 @@ const day = s => Date.UTC(+s.slice(0,4), +s.slice(5,7) - 1, +s.slice(8,10)) / 86
 const now = new Date();
 const TODAY = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 864e5;
 const fmt = s => s.slice(8,10) + '/' + s.slice(5,7);
+const dstr = d => new Date(d * 864e5).toISOString().slice(0,10);
 const range = ev => ev.start === ev.end ? fmt(ev.start) : fmt(ev.start) + ' → ' + fmt(ev.end);
 const esc = s => String(s).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
 const contests = () => [...new Set(events.map(x => x.contest))];
 const color = c => COLORS[c] || FALLBACK[contests().indexOf(c) % FALLBACK.length];
+const isPast = ev => day(ev.end) < TODAY;
 
 // overlapping pairs across different contests.
 // level 2 = two exam days on the same day, 1 = exam day inside another round, 0 = two rounds running in parallel
@@ -174,33 +282,66 @@ function findConflicts(list) {
 function countdown(ev) {
   const s = day(ev.start) - TODAY, en = day(ev.end) - TODAY;
   if (en < 0) return ['Đã qua', ''];
-  if (s <= 0) return [ev.start === ev.end ? 'HÔM NAY' : en ? `Đang diễn ra · còn ${en} ngày` : 'Hôm nay là ngày cuối', 'now'];
+  if (s <= 0) return [ev.start === ev.end ? 'Hôm nay' : en ? `Đang diễn ra · còn ${en} ngày` : 'Ngày cuối', 'now'];
   return [s === 1 ? 'Ngày mai' : `còn ${s} ngày`, s <= 7 ? 'soon' : ''];
 }
+
+const contestLabel = c => `<span class="ev-contest"><span class="dot" style="background:${color(c)}"></span><span class="eyebrow">${esc(c)}</span></span>`;
+const metaLine = ev => `<div class="meta"><span>${range(ev)}${ev.tentative ? ' (dự kiến)' : ''}</span>${ev.time ? `<span>${esc(ev.time)}</span>` : ''}${ev.place ? `<span>📍 ${esc(ev.place)}</span>` : ''}</div>`;
+const progress = ev => {
+  const done = ev.checklist.filter(i => i.done).length;
+  return ev.checklist.length ? `<div class="progress"><i style="width:${done / ev.checklist.length * 100}%"></i></div>` : '';
+};
 
 const hidden = new Set();
 
 function render() {
-  document.getElementById('todayText').textContent = 'Hôm nay: ' + now.toLocaleDateString('vi-VN', { weekday:'long', day:'2-digit', month:'2-digit', year:'numeric' });
+  document.getElementById('todayText').textContent = now.toLocaleDateString('vi-VN', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   document.getElementById('contests').innerHTML = contests().map(c => `<option value="${esc(c)}">`).join('');
+  const all = events.filter(x => !hidden.has(x.contest));
+  const byStart = (a, b) => day(a.start) - day(b.start) || day(a.end) - day(b.end);
+
+  // hero: nearest upcoming start + rounds currently running
+  const next = all.filter(x => day(x.start) >= TODAY).sort(byStart)[0];
+  const ongoing = all.filter(x => day(x.start) < TODAY && !isPast(x)).sort((a, b) => day(a.end) - day(b.end));
+  const d = next && day(next.start) - TODAY;
+  document.getElementById('hero').innerHTML = `
+    <div class="card next" ${next ? `data-open="${next.id}"` : ''}>
+      ${next ? `
+        <div class="next-num"><b>${d || 'Nay'}</b><span>${d ? 'ngày nữa' : 'hôm nay'}</span></div>
+        <div style="flex:1;min-width:0">
+          <div class="eyebrow">Mốc tiếp theo</div>
+          <h3>${esc(next.title)}</h3>
+          ${contestLabel(next.contest)}
+          <div style="margin-top:8px">${metaLine(next)}</div>
+          ${next.checklist.length ? `<div class="muted" style="margin-top:12px;font-size:12px">Chuẩn bị ${next.checklist.filter(i => i.done).length}/${next.checklist.length}</div>${progress(next)}` : ''}
+        </div>` : '<div class="muted">Không còn mốc nào sắp tới.</div>'}
+    </div>
+    <div class="card ongoing">
+      <div class="eyebrow">Đang diễn ra</div>
+      ${ongoing.length ? '<ul>' + ongoing.map(x => `<li data-open="${x.id}"><span class="dot" style="background:${color(x.contest)}"></span>
+        <div><div style="font-weight:500">${esc(x.title)}</div><div class="muted" style="font-size:12px">${esc(x.contest)} · ${countdown(x)[0]}</div></div></li>`).join('') + '</ul>'
+        : '<p class="muted" style="margin:12px 0 0">Không có vòng nào đang chạy.</p>'}
+    </div>`;
 
   // conflicts
-  const cf = findConflicts(events.filter(x => !hidden.has(x.contest)));
-  const dstr = d => new Date(d * 864e5).toISOString().slice(0,10);
-  const cfCard = c => `
-    <div class="card conflict ${c.level === 2 ? 'hard' : ''}">
-      <b>${['Chạy song song', 'Ngày thi trong lúc vòng khác đang chạy', 'Trùng ngày thi'][c.level]} · ${c.from === c.to ? fmt(dstr(c.from)) : fmt(dstr(c.from)) + ' → ' + fmt(dstr(c.to))}</b>
-      <div><span class="dot" style="background:${color(c.a.contest)}"></span>${esc(c.a.contest)} – ${esc(c.a.title)} <span class="muted">(${range(c.a)})</span></div>
-      <div><span class="dot" style="background:${color(c.b.contest)}"></span>${esc(c.b.contest)} – ${esc(c.b.title)} <span class="muted">(${range(c.b)})</span></div>
+  const cf = findConflicts(all);
+  const cfRow = c => `
+    <div class="cf ${c.level === 2 ? 'hard' : ''}">
+      <div class="cf-date"><b>${dstr(c.from).slice(8,10)}</b><span>Th${+dstr(c.from).slice(5,7)}</span></div>
+      <div style="min-width:0">
+        <div class="cf-type">${['Chạy song song', 'Ngày thi rơi vào vòng khác', 'Trùng ngày thi'][c.level]}${c.from === c.to ? '' : ` · đến ${fmt(dstr(c.to))}`}</div>
+        ${[c.a, c.b].map(x => `<div class="cf-ev"><span class="dot" style="background:${color(x.contest)}"></span><span><b style="font-weight:500">${esc(x.title)}</b> <span class="muted">· ${esc(x.contest)} · ${range(x)}</span></span></div>`).join('')}
+      </div>
     </div>`;
   const main = cf.filter(c => c.level), parallel = cf.filter(c => !c.level);
-  document.getElementById('conflicts').innerHTML = (main.length ? main.map(cfCard).join('') : '<p class="muted">Không có ngày thi nào bị trùng sắp tới 🎉</p>')
-    + (parallel.length ? `<details><summary class="muted">${parallel.length} cặp vòng thi chạy song song (ít nghiêm trọng hơn)</summary>${parallel.map(cfCard).join('')}</details>` : '');
+  document.getElementById('cfCount').textContent = main.length;
+  document.getElementById('conflicts').innerHTML = (main.length ? main.map(cfRow).join('') : '<div class="empty">Không có ngày thi nào bị trùng sắp tới 🎉</div>')
+    + (parallel.length ? `<details><summary>+ ${parallel.length} cặp vòng thi chạy song song</summary>${parallel.map(cfRow).join('')}</details>` : '');
 
   // timeline: whole months spanning all events
-  const all = events.filter(x => !hidden.has(x.contest));
   const tl = document.getElementById('timeline');
-  if (!all.length) { tl.innerHTML = '<p class="muted">Chưa có mốc nào.</p>'; }
+  if (!all.length) { tl.innerHTML = '<div class="empty">Chưa có mốc nào.</div>'; }
   else {
     const minS = all.reduce((m, x) => x.start < m ? x.start : m, all[0].start);
     const maxE = all.reduce((m, x) => x.end > m ? x.end : m, all[0].end);
@@ -211,49 +352,57 @@ function render() {
     const pct = d => ((d - t0) / span * 100) + '%';
     let html = '<div class="months">' + months.map(([yy, mm]) => {
       const w = (Date.UTC(yy, mm + 1, 1) - Date.UTC(yy, mm, 1)) / 864e5 / span * 100;
-      return `<div style="width:${w}%">T${mm + 1}/${yy}</div>`; }).join('') + '</div>';
+      return `<div style="width:${w}%">Tháng ${mm + 1}</div>`; }).join('') + '</div>';
+    html += '<div class="grid-lines">' + months.map(([yy, mm]) => `<i style="left:${pct(Date.UTC(yy, mm, 1) / 864e5)}"></i>`).join('') + '</div>';
     for (const c of contests().filter(c => !hidden.has(c))) {
       // greedy lanes so overlapping bars in one contest don't cover each other
-      const lanes = [], evs = all.filter(x => x.contest === c).sort((a, b) => day(a.start) - day(b.start));
+      const lanes = [], evs = all.filter(x => x.contest === c).sort(byStart);
       const bars = evs.map(ev => {
         let l = lanes.findIndex(end => end < day(ev.start));
         if (l < 0) l = lanes.push(0) - 1;
         lanes[l] = day(ev.end) + 1;
         const single = ev.start === ev.end, w = (day(ev.end) - day(ev.start) + 1) / span * 100;
-        const cls = ['bar', single && 'single', ev.tentative && 'tentative', day(ev.end) < TODAY && 'past'].filter(Boolean).join(' ');
+        const cls = ['bar', single && 'single', ev.tentative && 'tentative', isPast(ev) && 'past'].filter(Boolean).join(' ');
         const left = single ? pct(day(ev.start) + .5) : pct(day(ev.start));
-        return `<div class="${cls}" data-id="${ev.id}" title="${esc(ev.title)} · ${range(ev)}" style="left:${left};width:${w}%;top:${6 + l * 28}px;background:${color(c)}">${single ? '' : esc(ev.title)}</div>`;
+        return `<div class="${cls}" data-open="${ev.id}" title="${esc(ev.title)} · ${range(ev)}" style="left:${left};width:${w}%;top:${8 + l * 32}px;background:${color(c)}">${single ? '' : esc(ev.title)}</div>`;
       });
-      html += `<div class="row"><div class="row-label" style="color:${color(c)}">${esc(c)}</div><div class="track" style="height:${12 + lanes.length * 28}px">${bars.join('')}</div></div>`;
+      html += `<div class="row"><div class="row-label"><span class="dot" style="background:${color(c)}"></span>${esc(c)}</div><div class="track" style="height:${16 + lanes.length * 32}px">${bars.join('')}</div></div>`;
     }
-    if (TODAY >= t0 && TODAY < t1) html += `<div class="today" style="left:calc(130px + (100% - 130px) * ${(TODAY + .5 - t0) / span})"><span>Hôm nay</span></div>`;
+    if (TODAY >= t0 && TODAY < t1) html += `<div class="today" style="left:calc(var(--lw) + (100% - var(--lw)) * ${(TODAY + .5 - t0) / span})"><span>Hôm nay</span></div>`;
     tl.innerHTML = html;
   }
 
   // filters
   document.getElementById('filters').innerHTML = contests().map(c =>
-    `<label><input type="checkbox" data-contest="${esc(c)}" ${hidden.has(c) ? '' : 'checked'}> <span class="dot" style="background:${color(c)}"></span>${esc(c)}</label>`).join('');
+    `<button class="chip" data-contest="${esc(c)}" aria-pressed="${!hidden.has(c)}"><span class="dot" style="background:${color(c)}"></span>${esc(c)}</button>`).join('');
 
-  // cards
+  // cards grouped by month
   const showPast = document.getElementById('showPast').checked;
-  const conflictIds = new Set(cf.flatMap(c => [c.a.id, c.b.id]));
-  document.getElementById('list').innerHTML = all
-    .filter(x => showPast || day(x.end) >= TODAY)
-    .sort((a, b) => day(a.start) - day(b.start) || day(a.end) - day(b.end))
-    .map(ev => {
-      const [label, cls] = countdown(ev);
-      const done = ev.checklist.filter(i => i.done).length;
-      return `<div class="card ev ${day(ev.end) < TODAY ? 'past' : ''}" data-id="${ev.id}" style="border-left-color:${color(ev.contest)}">
-        <div class="ev-top"><div>
-          <div class="muted">${esc(ev.contest)}${conflictIds.has(ev.id) ? ' · <span style="color:var(--amber)">⚠️ trùng lịch</span>' : ''}</div>
-          <b>${esc(ev.title)}</b>
-          <div>${range(ev)}${ev.tentative ? ' <span class="muted">(dự kiến)</span>' : ''}${ev.time ? ' · ' + esc(ev.time) : ''}${ev.place ? ' · 📍' + esc(ev.place) : ''}</div>
-        </div><span class="badge ${cls}">${label}</span></div>
-        ${ev.notes ? `<div class="muted">${esc(ev.notes)}</div>` : ''}
-        ${ev.checklist.length ? `<div class="muted" style="margin-top:6px">Chuẩn bị: ${done}/${ev.checklist.length}</div><ul>` + ev.checklist.map((it, i) =>
-          `<li class="${it.done ? 'done' : ''}"><label><input type="checkbox" data-check="${i}" ${it.done ? 'checked' : ''}>${esc(it.t)}</label></li>`).join('') + '</ul>' : ''}
-      </div>`;
-    }).join('') || '<p class="muted">Không có mốc nào sắp tới.</p>';
+  const conflictIds = new Set(cf.filter(c => c.level).flatMap(c => [c.a.id, c.b.id]));
+  const groups = new Map();
+  for (const ev of all.filter(x => showPast || !isPast(x)).sort(byStart)) {
+    const k = ev.start.slice(0, 7);
+    groups.set(k, [...(groups.get(k) || []), ev]);
+  }
+  document.getElementById('list').innerHTML = [...groups].map(([k, evs]) => `
+    <div class="month">
+      <div class="month-head eyebrow">Tháng ${+k.slice(5)} · ${k.slice(0,4)}</div>
+      <div class="grid">${evs.map(ev => {
+        const [label, cls] = countdown(ev);
+        const done = ev.checklist.filter(i => i.done).length;
+        return `<div class="card ev ${isPast(ev) ? 'past' : ''}" data-open="${ev.id}" data-id="${ev.id}">
+          <div class="ev-top">${contestLabel(ev.contest)}<span class="badge ${cls}">${label}</span></div>
+          <h3>${esc(ev.title)}</h3>
+          ${metaLine(ev)}
+          ${conflictIds.has(ev.id) ? '<div class="tag">⚠ Trùng lịch với cuộc thi khác</div>' : ''}
+          ${ev.notes ? `<div class="notes">${esc(ev.notes)}</div>` : ''}
+          ${ev.checklist.length ? `<div class="checklist">
+            <div class="checklist-head"><span>Cần chuẩn bị</span><span>${done}/${ev.checklist.length}</span></div>${progress(ev)}
+            <ul>${ev.checklist.map((it, i) => `<li class="${it.done ? 'done' : ''}"><label><input type="checkbox" data-check="${i}" ${it.done ? 'checked' : ''}>${esc(it.t)}</label></li>`).join('')}</ul>
+          </div>` : ''}
+        </div>`;
+      }).join('')}</div>
+    </div>`).join('') || '<div class="card empty">Không có mốc nào sắp tới.</div>';
 }
 
 // --- interactions ---
@@ -268,6 +417,7 @@ function openEditor(ev) {
   form.end.value = v.end && v.end !== v.start ? v.end : '';
   form.tentative.checked = v.tentative;
   form.checklist.value = v.checklist.map(i => i.t).join('\n');
+  document.getElementById('dlgTitle').textContent = ev ? 'Sửa mốc' : 'Thêm mốc mới';
   document.getElementById('delBtn').style.visibility = ev ? 'visible' : 'hidden';
   dlg.showModal();
 }
@@ -301,14 +451,11 @@ document.body.addEventListener('click', ev => {
     const item = events.find(x => x.id === chk.closest('[data-id]').dataset.id).checklist[chk.dataset.check];
     item.done = chk.checked; save(); render(); return;
   }
-  if (ev.target.closest('label')) return;
-  const target = ev.target.closest('.bar, .ev');
-  if (target) openEditor(events.find(x => x.id === target.dataset.id));
-});
-document.getElementById('filters').addEventListener('change', ev => {
-  const c = ev.target.dataset.contest;
-  ev.target.checked ? hidden.delete(c) : hidden.add(c);
-  render();
+  const chip = ev.target.closest('[data-contest]');
+  if (chip) { const c = chip.dataset.contest; hidden.has(c) ? hidden.delete(c) : hidden.add(c); render(); return; }
+  if (ev.target.closest('label, dialog')) return;
+  const target = ev.target.closest('[data-open]');
+  if (target) openEditor(events.find(x => x.id === target.dataset.open));
 });
 
 // backup: localStorage lives only in this browser, so allow export/import
