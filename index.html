@@ -58,17 +58,24 @@
   .card[data-open]:hover { border-color:var(--text-3); }
 
   /* hero */
-  .hero { display:grid; grid-template-columns:2fr 1fr; gap:16px; }
-  .next { display:flex; gap:32px; padding:32px; align-items:center; }
+  .hero { display:grid; grid-template-columns:3fr 2fr; gap:16px; align-items:start; }
+  .next { padding:32px; }
+  .next-main { display:flex; gap:32px; align-items:center; }
   .next-num { text-align:center; min-width:96px; }
   .next-num b { display:block; font-size:48px; line-height:1; font-weight:700; letter-spacing:-.02em; }
   .next-num span { color:var(--text-3); font-size:14px; }
   .next h3 { margin:4px 0 8px; font-size:20px; line-height:1.25; font-weight:600; }
-  .ongoing { padding:24px; }
-  .ongoing ul { list-style:none; margin:12px 0 0; padding:0; display:grid; gap:12px; }
-  .ongoing li { display:flex; gap:8px; align-items:baseline; }
-  .ongoing li .dot { transform:translateY(-1px); }
-  @media (max-width:760px) { .hero { grid-template-columns:1fr; } .next { flex-direction:column; align-items:flex-start; gap:16px; padding:24px; } .next-num { text-align:left; } }
+  .place { font-size:16px; font-weight:600; margin-top:8px; }
+  .after { border-top:1px solid var(--line); margin-top:24px; padding-top:16px; }
+  .mini { list-style:none; margin:8px 0 0; padding:0; display:grid; gap:8px; }
+  .mini li { display:flex; gap:8px; align-items:baseline; }
+  .mini li .dot { transform:translateY(-1px); }
+  .mini-date { font-weight:600; font-size:12px; min-width:40px; }
+  .phases { padding:24px; display:grid; gap:24px; }
+  .phase + .phase { margin-top:12px; }
+  .phase-top { display:flex; justify-content:space-between; gap:8px; align-items:baseline; }
+  .phase .progress i { background:var(--c); }
+  @media (max-width:760px) { .hero { grid-template-columns:1fr; } .next { padding:24px; } .next-main { flex-direction:column; align-items:flex-start; gap:16px; } .next-num { text-align:left; } }
 
   .progress { height:4px; border-radius:99px; background:var(--sunken); overflow:hidden; margin-top:8px; }
   .progress i { display:block; height:100%; background:var(--green); border-radius:99px; }
@@ -417,27 +424,50 @@ function render() {
   const all = events.filter(x => !hidden.has(x.contest));
   const byStart = (a, b) => day(a.start) - day(b.start) || day(a.end) - day(b.end);
 
-  // hero: nearest upcoming start + rounds currently running
-  const next = all.filter(x => day(x.start) >= TODAY).sort(byStart)[0];
-  const ongoing = all.filter(x => day(x.start) < TODAY && !isPast(x)).sort((a, b) => day(a.end) - day(b.end));
+  // hero left: specific days (single-day = must be present somewhere); right: periods, kept separate
+  const examDays = all.filter(x => x.start === x.end && day(x.start) >= TODAY).sort(byStart);
+  const [next, ...later] = examDays;
+  const periods = all.filter(x => x.start !== x.end && !isPast(x));
+  const running = periods.filter(x => day(x.start) <= TODAY).sort((a, b) => day(a.end) - day(b.end));
+  const upcoming = periods.filter(x => day(x.start) > TODAY).sort(byStart).slice(0, 3);
   const d = next && day(next.start) - TODAY;
+  const who = x => `<span class="dot" style="background:${color(x.contest)}"></span>`;
   document.getElementById('hero').innerHTML = `
-    <div class="card next" ${next ? `data-open="${next.id}"` : ''}>
+    <div class="card next">
+      <div class="eyebrow">Ngày thi tiếp theo</div>
       ${next ? `
-        <div class="next-num"><b>${d || 'Nay'}</b><span>${d ? 'ngày nữa' : 'hôm nay'}</span></div>
-        <div style="flex:1;min-width:0">
-          <div class="eyebrow">Mốc tiếp theo</div>
-          <h3>${esc(next.title)}</h3>
-          ${contestLabel(next.contest)}
-          <div style="margin-top:8px">${metaLine(next)}</div>
-          ${next.checklist.length ? `<div class="muted" style="margin-top:12px;font-size:12px">Chuẩn bị ${next.checklist.filter(i => i.done).length}/${next.checklist.length}</div>${progress(next)}` : ''}
-        </div>` : '<div class="muted">Không còn mốc nào sắp tới.</div>'}
+        <div class="next-main" data-open="${next.id}" style="margin-top:16px">
+          <div class="next-num"><b>${d || 'Nay'}</b><span>${d === 0 ? 'hôm nay' : d === 1 ? 'ngày mai' : 'ngày nữa'}</span></div>
+          <div style="flex:1;min-width:0">
+            ${contestLabel(next.contest)}
+            <h3>${esc(next.title)}</h3>
+            <div class="meta"><span>${fmt(next.start)}</span>${next.time ? `<span>🕒 ${esc(next.time)}</span>` : ''}</div>
+            <div class="place">📍 ${next.place ? esc(next.place) : '<span class="muted">Chưa có địa điểm</span>'}</div>
+            ${next.checklist.length ? `<div class="muted" style="margin-top:12px;font-size:12px">Chuẩn bị ${next.checklist.filter(i => i.done).length}/${next.checklist.length}</div>${progress(next)}` : ''}
+          </div>
+        </div>
+        ${later.length ? `<div class="after"><div class="eyebrow">Các ngày sau đó</div><ul class="mini">${later.slice(0, 3).map(x => `
+          <li data-open="${x.id}"><span class="mini-date">${fmt(x.start)}</span>${who(x)}<span>${esc(x.title)} <span class="muted">· ${esc(x.contest)}${x.place ? ' · 📍 ' + esc(x.place) : ''} · còn ${day(x.start) - TODAY} ngày</span></span></li>`).join('')}</ul></div>` : ''}`
+      : '<p class="muted" style="margin:12px 0 0">Không còn ngày thi nào sắp tới.</p>'}
     </div>
-    <div class="card ongoing">
-      <div class="eyebrow">Đang diễn ra</div>
-      ${ongoing.length ? '<ul>' + ongoing.map(x => `<li data-open="${x.id}"><span class="dot" style="background:${color(x.contest)}"></span>
-        <div><div style="font-weight:500">${esc(x.title)}</div><div class="muted" style="font-size:12px">${esc(x.contest)} · ${countdown(x)[0]}</div></div></li>`).join('') + '</ul>'
-        : '<p class="muted" style="margin:12px 0 0">Không có vòng nào đang chạy.</p>'}
+    <div class="card phases">
+      <div>
+        <div class="eyebrow">Giai đoạn đang diễn ra</div>
+        ${running.length ? '<div style="margin-top:12px">' + running.map(x => {
+          const total = day(x.end) - day(x.start) + 1, gone = TODAY - day(x.start) + 1;
+          return `<div class="phase" data-open="${x.id}" style="--c:${color(x.contest)}">
+            <div class="phase-top"><span>${who(x)} <b style="font-weight:500">${esc(x.title)}</b></span><span class="muted" style="font-size:12px;white-space:nowrap">${countdown(x)[0].replace('Đang diễn ra · ', '')}</span></div>
+            <div class="muted" style="font-size:12px">${esc(x.contest)} · ${range(x)}</div>
+            <div class="progress"><i style="width:${gone / total * 100}%"></i></div>
+          </div>`; }).join('') + '</div>'
+          : '<p class="muted" style="margin:12px 0 0">Không có giai đoạn nào đang chạy.</p>'}
+      </div>
+      <div>
+        <div class="eyebrow">Giai đoạn sắp tới</div>
+        ${upcoming.length ? `<ul class="mini" style="margin-top:12px">${upcoming.map(x => `
+          <li data-open="${x.id}"><span class="mini-date">${fmt(x.start)}</span>${who(x)}<span>${esc(x.title)} <span class="muted">· ${esc(x.contest)} · sau ${day(x.start) - TODAY} ngày</span></span></li>`).join('')}</ul>`
+          : '<p class="muted" style="margin:12px 0 0">Không có giai đoạn nào sắp tới.</p>'}
+      </div>
     </div>`;
 
   // priority: specific exam days (single-day events) of different contests on the same date
