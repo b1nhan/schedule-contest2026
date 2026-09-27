@@ -77,7 +77,7 @@
   .conflicts { overflow:hidden; }
   .cf { display:flex; gap:16px; padding:16px 24px; border-top:1px solid var(--line); }
   .cf:first-child { border-top:none; }
-  .cf-date { width:56px; flex:none; text-align:center; padding:4px 0; border-radius:8px; background:var(--amber-bg); color:var(--amber); line-height:1.2; }
+  .cf-date { width:56px; flex:none; align-self:flex-start; text-align:center; padding:4px 0; border-radius:8px; background:var(--amber-bg); color:var(--amber); line-height:1.2; }
   .cf-date b { display:block; font-size:20px; }
   .cf-date span { font-size:12px; }
   .cf.hard .cf-date { background:var(--red-bg); color:var(--red); }
@@ -89,6 +89,14 @@
   details summary:hover { color:var(--text); }
   details .cf { opacity:.75; }
   .empty { padding:24px; color:var(--text-3); }
+  .empty.ok { color:var(--green); font-weight:500; }
+  .clash-ev { display:grid; gap:2px; }
+  .clash-ev + .clash-ev { margin-top:8px; }
+  .days { padding:16px 24px 24px; border-top:1px solid var(--line); }
+  .days-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .day-chip { display:inline-flex; align-items:center; gap:8px; padding:4px 12px 4px 4px; border-radius:99px; background:var(--sunken); cursor:pointer; }
+  .day-chip b { font-size:12px; padding:2px 8px; border-radius:99px; background:var(--surface); }
+  .day-chip.clash b { background:var(--red); color:#fff; }
 
   /* timeline */
   .tl { overflow-x:auto; padding:16px 24px 24px; }
@@ -162,10 +170,15 @@
     </div>
   </header>
 
-  <div class="hero" id="hero"></div>
+  <section style="margin-top:0">
+    <div class="sec-head"><h2>Ngày thi trùng nhau</h2><span class="count" id="clashCount"></span></div>
+    <div class="card conflicts" id="clashes"></div>
+  </section>
+
+  <section><div class="hero" id="hero"></div></section>
 
   <section>
-    <div class="sec-head"><h2>Lịch trùng nhau</h2><span class="count" id="cfCount"></span></div>
+    <div class="sec-head"><h2>Giai đoạn chồng lấn</h2><span class="count" id="cfCount"></span></div>
     <div class="card conflicts" id="conflicts"></div>
   </section>
 
@@ -279,6 +292,13 @@ function findConflicts(list) {
   return out.sort((x, y) => y.level - x.level || x.from - y.from);
 }
 
+// same-date exam days: [['YYYY-MM-DD', [events]], ...] for dates with ≥2 contests, upcoming only
+function findClashes(list) {
+  const byDate = new Map();
+  for (const x of list) if (x.start === x.end && day(x.start) >= TODAY) byDate.set(x.start, [...(byDate.get(x.start) || []), x]);
+  return [...byDate].filter(([, evs]) => new Set(evs.map(x => x.contest)).size > 1).sort(([a], [b]) => a < b ? -1 : 1);
+}
+
 function countdown(ev) {
   const s = day(ev.start) - TODAY, en = day(ev.end) - TODAY;
   if (en < 0) return ['Đã qua', ''];
@@ -324,20 +344,36 @@ function render() {
         : '<p class="muted" style="margin:12px 0 0">Không có vòng nào đang chạy.</p>'}
     </div>`;
 
-  // conflicts
-  const cf = findConflicts(all);
-  const cfRow = c => `
-    <div class="cf ${c.level === 2 ? 'hard' : ''}">
+  // priority: specific exam days (single-day events) of different contests on the same date
+  const clashes = findClashes(all);
+  const clashIds = new Set(clashes.flatMap(([, evs]) => evs.map(x => x.id)));
+  document.getElementById('clashCount').textContent = clashes.length;
+  const upcomingDays = all.filter(x => x.start === x.end && !isPast(x)).sort(byStart);
+  document.getElementById('clashes').innerHTML = (clashes.length ? clashes.map(([d, evs]) => `
+    <div class="cf hard">
+      <div class="cf-date"><b>${d.slice(8,10)}</b><span>Th${+d.slice(5,7)}</span></div>
+      <div style="min-width:0">
+        <div class="cf-type">${evs.length} cuộc thi cùng ngày · ${countdown(evs[0])[0]}</div>
+        ${evs.map(x => `<div class="clash-ev" data-open="${x.id}">
+          <div class="cf-ev"><span class="dot" style="background:${color(x.contest)}"></span><span><b style="font-weight:500">${esc(x.title)}</b> <span class="muted">· ${esc(x.contest)}</span></span></div>
+          <div class="muted" style="padding-left:16px;font-size:12px">${[x.time && '🕒 ' + esc(x.time), x.place && '📍 ' + esc(x.place)].filter(Boolean).join(' · ') || 'Chưa có giờ / địa điểm'}</div>
+        </div>`).join('')}
+      </div>
+    </div>`).join('') : '<div class="empty ok">✓ Không có ngày thi nào trùng nhau</div>')
+    + (upcomingDays.length ? `<div class="days"><div class="eyebrow">Các ngày thi sắp tới</div><div class="days-list">${upcomingDays.map(x =>
+      `<span class="day-chip ${clashIds.has(x.id) ? 'clash' : ''}" data-open="${x.id}"><b>${fmt(x.start)}</b><span class="dot" style="background:${color(x.contest)}"></span>${esc(x.title)}</span>`).join('')}</div></div>` : '');
+
+  // secondary: periods overlapping (a round running while another round / exam day happens)
+  const cf = findConflicts(all).filter(c => c.level < 2);
+  document.getElementById('cfCount').textContent = cf.length;
+  document.getElementById('conflicts').innerHTML = cf.map(c => `
+    <div class="cf">
       <div class="cf-date"><b>${dstr(c.from).slice(8,10)}</b><span>Th${+dstr(c.from).slice(5,7)}</span></div>
       <div style="min-width:0">
-        <div class="cf-type">${['Chạy song song', 'Ngày thi rơi vào vòng khác', 'Trùng ngày thi'][c.level]}${c.from === c.to ? '' : ` · đến ${fmt(dstr(c.to))}`}</div>
+        <div class="cf-type">${c.level ? 'Ngày thi rơi vào giai đoạn khác' : 'Hai giai đoạn chạy song song'}${c.from === c.to ? '' : ` · đến ${fmt(dstr(c.to))}`}</div>
         ${[c.a, c.b].map(x => `<div class="cf-ev"><span class="dot" style="background:${color(x.contest)}"></span><span><b style="font-weight:500">${esc(x.title)}</b> <span class="muted">· ${esc(x.contest)} · ${range(x)}</span></span></div>`).join('')}
       </div>
-    </div>`;
-  const main = cf.filter(c => c.level), parallel = cf.filter(c => !c.level);
-  document.getElementById('cfCount').textContent = main.length;
-  document.getElementById('conflicts').innerHTML = (main.length ? main.map(cfRow).join('') : '<div class="empty">Không có ngày thi nào bị trùng sắp tới 🎉</div>')
-    + (parallel.length ? `<details><summary>+ ${parallel.length} cặp vòng thi chạy song song</summary>${parallel.map(cfRow).join('')}</details>` : '');
+    </div>`).join('') || '<div class="empty">Không có giai đoạn nào chồng lấn.</div>';
 
   // timeline: whole months spanning all events
   const tl = document.getElementById('timeline');
@@ -378,7 +414,6 @@ function render() {
 
   // cards grouped by month
   const showPast = document.getElementById('showPast').checked;
-  const conflictIds = new Set(cf.filter(c => c.level).flatMap(c => [c.a.id, c.b.id]));
   const groups = new Map();
   for (const ev of all.filter(x => showPast || !isPast(x)).sort(byStart)) {
     const k = ev.start.slice(0, 7);
@@ -394,7 +429,7 @@ function render() {
           <div class="ev-top">${contestLabel(ev.contest)}<span class="badge ${cls}">${label}</span></div>
           <h3>${esc(ev.title)}</h3>
           ${metaLine(ev)}
-          ${conflictIds.has(ev.id) ? '<div class="tag">⚠ Trùng lịch với cuộc thi khác</div>' : ''}
+          ${clashIds.has(ev.id) ? '<div class="tag" style="color:var(--red)">⚠ Trùng ngày thi với cuộc thi khác</div>' : ''}
           ${ev.notes ? `<div class="notes">${esc(ev.notes)}</div>` : ''}
           ${ev.checklist.length ? `<div class="checklist">
             <div class="checklist-head"><span>Cần chuẩn bị</span><span>${done}/${ev.checklist.length}</span></div>${progress(ev)}
@@ -480,6 +515,8 @@ fileIn.onchange = async () => {
   const t = (c, s, en) => ({ contest:c, start:s, end:en || s });
   const r = findConflicts([t('A','2099-01-05'), t('B','2099-01-05'), t('C','2099-01-01','2099-01-10'), t('A','2099-02-01'), t('D','2099-01-11')]);
   console.assert(r.length === 3 && r.map(x => x.level).join() === '2,1,1', 'findConflicts broken', r);
+  const k = findClashes([t('A','2099-03-10'), t('B','2099-03-10'), t('C','2099-03-10'), t('A','2099-03-11'), t('A','2099-03-12'), t('A','2099-03-12'), t('D','2099-03-01','2099-03-20')]);
+  console.assert(k.length === 1 && k[0][1].length === 3, 'findClashes broken', k);
 }
 
 render();
