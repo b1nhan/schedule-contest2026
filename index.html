@@ -58,10 +58,23 @@
   .card[data-open]:hover { border-color:var(--text-3); }
 
   /* hero */
-  .hero { display:grid; grid-template-columns:3fr 2fr; gap:16px; align-items:start; }
-  .next { padding:32px; }
-  .next-main { display:flex; gap:32px; align-items:center; }
-  .next-num { text-align:center; min-width:96px; }
+  .status { font-size:12px; font-weight:600; padding:2px 8px; border-radius:99px; text-decoration:none; margin-left:8px; white-space:nowrap; }
+  .status.ok { background:var(--green-bg); color:var(--green); }
+  .status.bad { background:var(--red-bg); color:var(--red); }
+  .dash { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; align-items:start; }
+  .dash > .card { padding:24px; }
+  .dash .col-body { max-height:520px; overflow:auto; margin:16px -8px 0; padding:0 8px; }
+  .split { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; align-items:start; }
+  .todo + .todo { margin-top:16px; padding-top:16px; border-top:1px solid var(--line); }
+  .todo-head { display:flex; justify-content:space-between; gap:8px; align-items:baseline; }
+  .todo ul { list-style:none; padding:0; margin:8px 0 0; display:grid; gap:8px; }
+  .todo label { display:flex; gap:8px; align-items:flex-start; cursor:pointer; }
+  .todo input { margin:3px 0 0; accent-color:var(--green); width:16px; height:16px; flex:none; }
+  .dash .info { padding:0; border:none; box-shadow:none; gap:12px; }
+  @media (max-width:1000px) { .dash { grid-template-columns:1fr 1fr; } .dash > :last-child { grid-column:1 / -1; } }
+  @media (max-width:700px) { .dash, .split { grid-template-columns:1fr; } }
+  .next-main { display:flex; gap:24px; align-items:flex-start; }
+  .next-num { text-align:center; min-width:64px; }
   .next-num b { display:block; font-size:48px; line-height:1; font-weight:700; letter-spacing:-.02em; }
   .next-num span { color:var(--text-3); font-size:14px; }
   .next h3 { margin:4px 0 8px; font-size:20px; line-height:1.25; font-weight:600; }
@@ -75,7 +88,7 @@
   .phase + .phase { margin-top:12px; }
   .phase-top { display:flex; justify-content:space-between; gap:8px; align-items:baseline; }
   .phase .progress i { background:var(--c); }
-  @media (max-width:760px) { .hero { grid-template-columns:1fr; } .next { padding:24px; } .next-main { flex-direction:column; align-items:flex-start; gap:16px; } .next-num { text-align:left; } }
+
 
   .progress { height:4px; border-radius:99px; background:var(--sunken); overflow:hidden; margin-top:8px; }
   .progress i { display:block; height:100%; background:var(--green); border-radius:99px; }
@@ -198,7 +211,7 @@
 <body>
 <main>
   <header>
-    <div><h1>Lịch thi 2026</h1><div class="sub" id="todayText"></div></div>
+    <div><h1>Lịch thi 2026</h1><div class="sub"><span id="todayText"></span> <a href="#lich" class="status" id="status"></a></div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" id="exportBtn">Xuất JSON</button>
       <button class="btn" id="importBtn">Nhập JSON</button>
@@ -206,21 +219,23 @@
     </div>
   </header>
 
-  <section style="margin-top:0">
-    <div class="sec-head"><h2>Ngày thi trùng nhau</h2><span class="count" id="clashCount"></span></div>
-    <div class="card conflicts" id="clashes"></div>
-  </section>
+  <div class="dash" id="dash"></div>
 
-  <section><div class="hero" id="hero"></div></section>
-
-  <section>
-    <div class="sec-head"><h2>Giai đoạn chồng lấn</h2><span class="count" id="cfCount"></span><span class="legend"><i></i>những ngày bị chồng</span></div>
-    <div class="card conflicts" id="conflicts"></div>
+  <section id="lich">
+    <div class="split">
+      <div><div class="sec-head"><h2>Ngày thi trùng nhau</h2><span class="count" id="clashCount"></span></div><div class="card conflicts" id="clashes"></div></div>
+      <div><div class="sec-head"><h2>Giai đoạn</h2></div><div class="card phases" id="phases"></div></div>
+    </div>
   </section>
 
   <section>
     <div class="sec-head"><h2>Timeline</h2></div>
     <div class="card tl"><div class="tl-inner" id="timeline"></div></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Giai đoạn chồng lấn</h2><span class="count" id="cfCount"></span><span class="legend"><i></i>những ngày bị chồng</span></div>
+    <div class="card conflicts" id="conflicts"></div>
   </section>
 
   <section>
@@ -424,35 +439,48 @@ function render() {
   const all = events.filter(x => !hidden.has(x.contest));
   const byStart = (a, b) => day(a.start) - day(b.start) || day(a.end) - day(b.end);
 
-  // hero left: specific days (single-day = must be present somewhere); right: periods, kept separate
+  // dashboard: three different kinds of info side by side (what's next / what to do / who to ask).
+  // timeline-type views (clashes, periods, gantt) live below the fold.
   const examDays = all.filter(x => x.start === x.end && day(x.start) >= TODAY).sort(byStart);
-  const [next, ...later] = examDays;
-  const periods = all.filter(x => x.start !== x.end && !isPast(x));
-  const running = periods.filter(x => day(x.start) <= TODAY).sort((a, b) => day(a.end) - day(b.end));
-  const upcoming = periods.filter(x => day(x.start) > TODAY).sort(byStart).slice(0, 3);
+  const next = examDays[0];
   const d = next && day(next.start) - TODAY;
   const who = x => `<span class="dot" style="background:${color(x.contest)}"></span>`;
-  document.getElementById('hero').innerHTML = `
-    <div class="card next">
+  const todos = all.filter(x => !isPast(x) && day(x.start) - TODAY <= 14 && x.checklist.some(i => !i.done)).sort(byStart);
+  document.getElementById('dash').innerHTML = `
+    <div class="card">
       <div class="eyebrow">Ngày thi tiếp theo</div>
-      ${next ? `
-        <div class="next-main" data-open="${next.id}" style="margin-top:16px">
+      ${next ? `<div class="col-body">
+        <div class="next-main" data-open="${next.id}">
           <div class="next-num"><b>${d || 'Nay'}</b><span>${d === 0 ? 'hôm nay' : d === 1 ? 'ngày mai' : 'ngày nữa'}</span></div>
           <div style="flex:1;min-width:0">
             ${contestLabel(next.contest)}
             <h3>${esc(next.title)}</h3>
             <div class="meta"><span>${fmt(next.start)}</span>${next.time ? `<span>🕒 ${esc(next.time)}</span>` : ''}</div>
             <div class="place">📍 ${next.place ? esc(next.place) : '<span class="muted">Chưa có địa điểm</span>'}</div>
-            ${next.checklist.length ? `<div class="muted" style="margin-top:12px;font-size:12px">Chuẩn bị ${next.checklist.filter(i => i.done).length}/${next.checklist.length}</div>${progress(next)}` : ''}
           </div>
         </div>
-        ${later.length ? `<div class="after"><div class="eyebrow">Các ngày sau đó</div><ul class="mini">${later.slice(0, 3).map(x => `
-          <li data-open="${x.id}"><span class="mini-date">${fmt(x.start)}</span>${who(x)}<span>${esc(x.title)} <span class="muted">· ${esc(x.contest)}${x.place ? ' · 📍 ' + esc(x.place) : ''} · còn ${day(x.start) - TODAY} ngày</span></span></li>`).join('')}</ul></div>` : ''}`
-      : '<p class="muted" style="margin:12px 0 0">Không còn ngày thi nào sắp tới.</p>'}
+        ${next.notes ? `<div class="after"><div class="eyebrow">Nội dung / lưu ý</div><p class="notes" style="margin:8px 0 0">${esc(next.notes)}</p></div>` : ''}
+      </div>` : '<p class="muted" style="margin:12px 0 0">Không còn ngày thi nào sắp tới.</p>'}
     </div>
-    <div class="card phases">
+    <div class="card">
+      <div class="eyebrow">Việc cần làm · 14 ngày tới</div>
+      <div class="col-body">${todos.map(x => `
+        <div class="todo" data-id="${x.id}">
+          <div class="todo-head"><span data-open="${x.id}">${who(x)} <b style="font-weight:600">${esc(x.title)}</b> <span class="muted" style="font-size:12px">· ${esc(x.contest)}</span></span><span class="badge ${countdown(x)[1]}">${countdown(x)[0].replace('Đang diễn ra · ', '')}</span></div>
+          <ul>${x.checklist.map((it, i) => it.done ? '' : `<li><label><input type="checkbox" data-check="${i}">${esc(it.t)}</label></li>`).join('')}</ul>
+        </div>`).join('') || '<p class="muted">✓ Không còn việc nào trong 14 ngày tới.</p>'}</div>
+    </div>
+    <div class="card">
+      <div class="eyebrow">Về cuộc thi sắp tới</div>
+      <div class="col-body">${next && CONTESTS[next.contest] ? infoCard(next.contest) : '<p class="muted">Chưa có thông tin.</p>'}</div>
+    </div>`;
+
+  const periods = all.filter(x => x.start !== x.end && !isPast(x));
+  const running = periods.filter(x => day(x.start) <= TODAY).sort((a, b) => day(a.end) - day(b.end));
+  const upcoming = periods.filter(x => day(x.start) > TODAY).sort(byStart).slice(0, 4);
+  document.getElementById('phases').innerHTML = `
       <div>
-        <div class="eyebrow">Giai đoạn đang diễn ra</div>
+        <div class="eyebrow">Đang diễn ra</div>
         ${running.length ? '<div style="margin-top:12px">' + running.map(x => {
           const total = day(x.end) - day(x.start) + 1, gone = TODAY - day(x.start) + 1;
           return `<div class="phase" data-open="${x.id}" style="--c:${color(x.contest)}">
@@ -463,17 +491,19 @@ function render() {
           : '<p class="muted" style="margin:12px 0 0">Không có giai đoạn nào đang chạy.</p>'}
       </div>
       <div>
-        <div class="eyebrow">Giai đoạn sắp tới</div>
+        <div class="eyebrow">Sắp bắt đầu</div>
         ${upcoming.length ? `<ul class="mini" style="margin-top:12px">${upcoming.map(x => `
           <li data-open="${x.id}"><span class="mini-date">${fmt(x.start)}</span>${who(x)}<span>${esc(x.title)} <span class="muted">· ${esc(x.contest)} · sau ${day(x.start) - TODAY} ngày</span></span></li>`).join('')}</ul>`
           : '<p class="muted" style="margin:12px 0 0">Không có giai đoạn nào sắp tới.</p>'}
-      </div>
-    </div>`;
+      </div>`;
 
   // priority: specific exam days (single-day events) of different contests on the same date
   const clashes = findClashes(all);
   const clashIds = new Set(clashes.flatMap(([, evs]) => evs.map(x => x.id)));
   document.getElementById('clashCount').textContent = clashes.length;
+  const st = document.getElementById('status');
+  st.className = 'status ' + (clashes.length ? 'bad' : 'ok');
+  st.textContent = clashes.length ? `⚠ ${clashes.length} ngày thi bị trùng` : '✓ Không trùng ngày thi';
   const upcomingDays = all.filter(x => x.start === x.end && !isPast(x)).sort(byStart);
   document.getElementById('clashes').innerHTML = (clashes.length ? clashes.map(([d, evs]) => `
     <div class="cf hard">
@@ -487,7 +517,7 @@ function render() {
       </div>
     </div>`).join('') : '<div class="empty ok">✓ Không có ngày thi nào trùng nhau</div>')
     + (upcomingDays.length ? `<div class="days"><div class="eyebrow">Các ngày thi sắp tới</div><div class="days-list">${upcomingDays.map(x =>
-      `<span class="day-chip ${clashIds.has(x.id) ? 'clash' : ''}" data-open="${x.id}"><b>${fmt(x.start)}</b><span class="dot" style="background:${color(x.contest)}"></span>${esc(x.title)}</span>`).join('')}</div></div>` : '');
+      `<span class="day-chip ${clashIds.has(x.id) ? 'clash' : ''}" data-open="${x.id}"><b>${fmt(x.start)}</b><span class="dot" style="background:${color(x.contest)}"></span>${esc(x.title)}${x.place ? ` <span class="muted">· ${esc(x.place)}</span>` : ''}</span>`).join('')}</div></div>` : '');
 
   // secondary: periods overlapping (a round running while another round / exam day happens)
   const cf = findConflicts(all).filter(c => c.level < 2).sort((x, y) => x.from - y.from || y.level - x.level);
@@ -578,11 +608,10 @@ function render() {
   renderInfo();
 }
 
-function renderInfo() {
+function infoCard(c) {
   const contact = t => t.includes('@') ? `<a class="mail" href="mailto:${esc(t)}">${esc(t)}</a>` : esc(t);
-  document.getElementById('info').innerHTML = contests().filter(c => !hidden.has(c) && CONTESTS[c]).map(c => {
-    const i = CONTESTS[c];
-    return `<div class="card info">
+  const i = CONTESTS[c];
+  return `<div class="card info">
       ${contestLabel(c)}
       <div><h3>${esc(i.name)}</h3><div class="muted">${esc(i.org)}</div></div>
       <div class="links">${i.links.map(([l, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join('')}</div>
@@ -590,8 +619,8 @@ function renderInfo() {
       <ul class="facts">${i.facts.map(f => `<li>${esc(f)}</li>`).join('')}</ul>
       <div class="ask"><div class="eyebrow">Cần hỏi BTC</div><ul>${i.ask.map(q => `<li>${esc(q)}</li>`).join('')}</ul></div>
     </div>`;
-  }).join('');
 }
+const renderInfo = () => document.getElementById('info').innerHTML = contests().filter(c => !hidden.has(c) && CONTESTS[c]).map(infoCard).join('');
 
 // --- interactions ---
 const dlg = document.getElementById('dlg'), form = document.getElementById('form');
